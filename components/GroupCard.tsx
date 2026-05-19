@@ -9,18 +9,18 @@ interface Props {
   onDeleted: () => void;
 }
 
-const PROGRAM_COLORS: Record<Program, string> = {
-  Start:          "text-sky-700",
-  Pro:            "text-violet-700",
-  Momentum:       "text-orange-700",
-  Boost:          "text-green-700",
-  "אימון לאיזון": "text-rose-700",
+const PROGRAM_COLORS: Record<Program, { bg: string; text: string; border: string }> = {
+  Start:          { bg: "bg-sky-100",     text: "text-sky-700",     border: "border-sky-200" },
+  Pro:            { bg: "bg-violet-100",  text: "text-violet-700",  border: "border-violet-200" },
+  Momentum:       { bg: "bg-orange-100",  text: "text-orange-700",  border: "border-orange-200" },
+  Boost:          { bg: "bg-green-100",   text: "text-green-700",   border: "border-green-200" },
+  "אימון לאיזון": { bg: "bg-rose-100",    text: "text-rose-700",    border: "border-rose-200" },
 };
 
 export default function GroupCard({ group, onDeleted }: Props) {
   const week = getCurrentWeek(group.startDate, group.program);
   const total = PROGRAM_WEEKS[group.program];
-  const color = PROGRAM_COLORS[group.program];
+  const colors = PROGRAM_COLORS[group.program];
 
   const handleDelete = async () => {
     if (!confirm(`למחוק את הקבוצה "${group.name}"?`)) return;
@@ -29,16 +29,17 @@ export default function GroupCard({ group, onDeleted }: Props) {
   };
 
   return (
-    <div className="group flex items-center justify-between px-4 py-2.5 rounded-xl hover:bg-white hover:shadow-sm transition-all" dir="rtl">
-      <span className="text-gray-800 font-medium text-base">{group.name}</span>
-      <div className="flex items-center gap-3">
-        <span className={`text-sm font-bold tabular-nums ${color}`}>
-          שבוע {week}
-          <span className="text-gray-300 font-normal"> / {total}</span>
-        </span>
+    <div className="group relative bg-white rounded-2xl shadow-sm border border-gray-100 px-8 py-5 flex items-center justify-between hover:shadow-md transition-shadow" dir="rtl">
+      <span className="text-2xl font-bold text-gray-800">{group.name}</span>
+      <div className="flex items-center gap-4">
+        <div className="text-left">
+          <span className={`text-4xl font-black ${colors.text}`}>{week}</span>
+          <span className="text-sm text-gray-400 mr-1">/ {total}</span>
+          <div className="text-xs text-gray-400 text-center">שבוע</div>
+        </div>
         <button
           onClick={handleDelete}
-          className="opacity-0 group-hover:opacity-100 text-gray-300 hover:text-red-400 transition-all text-base leading-none"
+          className="opacity-0 group-hover:opacity-100 text-gray-300 hover:text-red-400 transition-all text-xl leading-none p-1"
           title="מחק קבוצה"
         >
           ✕

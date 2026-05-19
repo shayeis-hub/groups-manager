@@ -5,8 +5,8 @@ import { collection, query, where, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/context/AuthContext";
 import { Group, isGroupActive, PROGRAMS, Program } from "@/lib/groups";
-import GroupCard from "@/components/GroupCard";
 import AddGroupModal from "@/components/AddGroupModal";
+import ProgramSection from "@/components/ProgramSection";
 
 const PROGRAM_COLORS: Record<Program, string> = {
   Start:          "text-sky-700",
@@ -124,20 +124,15 @@ export default function Home() {
             <p className="text-gray-300 mt-2">לחץ על ״הוסף קבוצה״ כדי להתחיל</p>
           </div>
         ) : (
-          <div className="flex flex-col gap-8">
+          <div className="flex flex-col gap-3">
             {activePrograms.map((program) => (
-              <section key={program}>
-                <div className="flex items-center gap-3 mb-3">
-                  <h2 className={`text-lg font-bold ${PROGRAM_COLORS[program]}`}>{program}</h2>
-                  <span className="text-sm text-gray-300">{grouped[program].length} קבוצות</span>
-                  <div className="flex-1 h-px bg-gray-100" />
-                </div>
-                <div className="bg-gray-100/60 rounded-2xl px-2 py-1 flex flex-col divide-y divide-gray-200/60">
-                  {grouped[program].map((g) => (
-                    <GroupCard key={g.id} group={g} onDeleted={fetchGroups} />
-                  ))}
-                </div>
-              </section>
+              <ProgramSection
+                key={program}
+                program={program}
+                groups={grouped[program]}
+                color={PROGRAM_COLORS[program]}
+                onDeleted={fetchGroups}
+              />
             ))}
           </div>
         )}
