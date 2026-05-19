@@ -1,65 +1,125 @@
-import Image from "next/image";
+"use client";
+
+import { useEffect, useState } from "react";
+import { collection, query, where, getDocs, orderBy } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import { useAuth } from "@/context/AuthContext";
+import { Group, isGroupActive } from "@/lib/groups";
+import GroupCard from "@/components/GroupCard";
+import AddGroupModal from "@/components/AddGroupModal";
 
 export default function Home() {
+  const { user, loading, signIn, signOut } = useAuth();
+  const [groups, setGroups] = useState<Group[]>([]);
+  const [fetching, setFetching] = useState(false);
+  const [showModal, setShowModal] = useState(false);
+
+  const fetchGroups = async () => {
+    if (!user) return;
+    setFetching(true);
+    try {
+      const q = query(
+        collection(db, "groups"),
+        where("userId", "==", user.uid),
+        orderBy("createdAt", "asc")
+      );
+      const snap = await getDocs(q);
+      const all = snap.docs.map((d) => ({ id: d.id, ...d.data() } as Group));
+      setGroups(all.filter((g) => isGroupActive(g.startDate, g.program)));
+    } finally {
+      setFetching(false);
+    }
+  };
+
+  useEffect(() => {
+    if (user) fetchGroups();
+    else setGroups([]);
+  }, [user]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-indigo-50 to-white gap-8">
+        <div className="text-center">
+          <h1 className="text-5xl font-black text-gray-800 mb-3">ניהול קבוצות</h1>
+          <p className="text-gray-400 text-lg">התחבר כדי לנהל את הקבוצות שלך</p>
+        </div>
+        <button
+          onClick={signIn}
+          className="flex items-center gap-3 bg-white border border-gray-200 shadow-md hover:shadow-lg text-gray-700 font-semibold px-8 py-4 rounded-2xl transition-all text-lg"
+        >
+          <svg className="w-6 h-6" viewBox="0 0 48 48">
+            <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+            <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+            <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+            <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+          </svg>
+          התחבר עם Google
+        </button>
+      </div>
+    );
+  }
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
+    <div className="min-h-screen bg-gray-50" dir="rtl">
+      <header className="bg-white border-b border-gray-100 sticky top-0 z-10">
+        <div className="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between">
+          <h1 className="text-2xl font-black text-gray-800">ניהול קבוצות</h1>
+          <div className="flex items-center gap-4">
+            <span className="text-sm text-gray-400 hidden sm:block">{user.displayName}</span>
+            <button
+              onClick={signOut}
+              className="text-sm text-gray-400 hover:text-gray-600 transition"
             >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+              התנתק
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <main className="max-w-4xl mx-auto px-6 py-10">
+        <div className="flex items-center justify-between mb-8">
+          <p className="text-gray-400 text-sm">
+            {groups.length === 0 ? "אין קבוצות פעילות" : `${groups.length} קבוצות פעילות`}
           </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+          <button
+            onClick={() => setShowModal(true)}
+            className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-6 py-3 rounded-xl transition flex items-center gap-2 shadow-sm"
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+            <span className="text-xl leading-none">+</span>
+            הוסף קבוצה
+          </button>
         </div>
+
+        {fetching ? (
+          <div className="flex justify-center py-20">
+            <div className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin" />
+          </div>
+        ) : groups.length === 0 ? (
+          <div className="text-center py-24">
+            <div className="text-6xl mb-4">📋</div>
+            <p className="text-xl font-semibold text-gray-400">אין קבוצות פעילות</p>
+            <p className="text-gray-300 mt-2">לחץ על ״הוסף קבוצה״ כדי להתחיל</p>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-3">
+            {groups.map((g) => (
+              <GroupCard key={g.id} group={g} onDeleted={fetchGroups} />
+            ))}
+          </div>
+        )}
       </main>
+
+      {showModal && (
+        <AddGroupModal onClose={() => setShowModal(false)} onAdded={fetchGroups} />
+      )}
     </div>
   );
 }

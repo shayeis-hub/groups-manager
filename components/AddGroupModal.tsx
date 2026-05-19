@@ -1,0 +1,103 @@
+"use client";
+
+import { useState } from "react";
+import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import { useAuth } from "@/context/AuthContext";
+import { PROGRAMS, Program } from "@/lib/groups";
+
+interface Props {
+  onClose: () => void;
+  onAdded: () => void;
+}
+
+export default function AddGroupModal({ onClose, onAdded }: Props) {
+  const { user } = useAuth();
+  const [name, setName] = useState("");
+  const [program, setProgram] = useState<Program>("Start");
+  const [startDate, setStartDate] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user || !name.trim() || !startDate) return;
+    setLoading(true);
+    try {
+      await addDoc(collection(db, "groups"), {
+        name: name.trim(),
+        program,
+        startDate,
+        createdAt: Date.now(),
+        userId: user.uid,
+      });
+      onAdded();
+      onClose();
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8">
+        <h2 className="text-2xl font-bold text-gray-800 mb-6">הוספת קבוצה</h2>
+        <form onSubmit={handleSubmit} className="flex flex-col gap-5" dir="rtl">
+          <div className="flex flex-col gap-1.5">
+            <label className="text-sm font-medium text-gray-600">תוכנית</label>
+            <select
+              value={program}
+              onChange={(e) => setProgram(e.target.value as Program)}
+              className="border border-gray-200 rounded-xl px-4 py-3 text-gray-800 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent transition"
+            >
+              {PROGRAMS.map((p) => (
+                <option key={p} value={p}>{p}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <label className="text-sm font-medium text-gray-600">שם הקבוצה</label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="הכנס שם קבוצה..."
+              className="border border-gray-200 rounded-xl px-4 py-3 text-gray-800 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent transition placeholder:text-gray-300"
+              required
+            />
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <label className="text-sm font-medium text-gray-600">תאריך התחלה</label>
+            <input
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              className="border border-gray-200 rounded-xl px-4 py-3 text-gray-800 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent transition"
+              required
+            />
+          </div>
+
+          <div className="flex gap-3 mt-2">
+            <button
+              type="submit"
+              disabled={loading}
+              className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl py-3 transition disabled:opacity-50"
+            >
+              {loading ? "שומר..." : "הוסף קבוצה"}
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold rounded-xl py-3 transition"
+            >
+              ביטול
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
