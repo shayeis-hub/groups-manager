@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { collection, query, where, getDocs, orderBy } from "firebase/firestore";
+import { collection, query, where, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/context/AuthContext";
 import { Group, isGroupActive } from "@/lib/groups";
@@ -20,12 +20,15 @@ export default function Home() {
     try {
       const q = query(
         collection(db, "groups"),
-        where("userId", "==", user.uid),
-        orderBy("createdAt", "asc")
+        where("userId", "==", user.uid)
       );
       const snap = await getDocs(q);
-      const all = snap.docs.map((d) => ({ id: d.id, ...d.data() } as Group));
+      const all = snap.docs
+        .map((d) => ({ id: d.id, ...d.data() } as Group))
+        .sort((a, b) => a.createdAt - b.createdAt);
       setGroups(all.filter((g) => isGroupActive(g.startDate, g.program)));
+    } catch (err) {
+      console.error("fetchGroups error:", err);
     } finally {
       setFetching(false);
     }

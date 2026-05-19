@@ -17,11 +17,13 @@ export default function AddGroupModal({ onClose, onAdded }: Props) {
   const [program, setProgram] = useState<Program>("Start");
   const [startDate, setStartDate] = useState("");
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user || !name.trim() || !startDate) return;
     setLoading(true);
+    setError("");
     try {
       await addDoc(collection(db, "groups"), {
         name: name.trim(),
@@ -32,8 +34,9 @@ export default function AddGroupModal({ onClose, onAdded }: Props) {
       });
       onAdded();
       onClose();
-    } catch (err) {
+    } catch (err: unknown) {
       console.error(err);
+      setError(err instanceof Error ? err.message : "שגיאה בשמירה, נסה שוב");
     } finally {
       setLoading(false);
     }
@@ -79,6 +82,10 @@ export default function AddGroupModal({ onClose, onAdded }: Props) {
               required
             />
           </div>
+
+          {error && (
+            <p className="text-sm text-red-500 bg-red-50 rounded-lg px-3 py-2">{error}</p>
+          )}
 
           <div className="flex gap-3 mt-2">
             <button
