@@ -132,7 +132,7 @@ export default function Home() {
                   <span className="text-sm text-gray-300">{grouped[program].length} קבוצות</span>
                   <div className="flex-1 h-px bg-gray-100" />
                 </div>
-                <div className="flex flex-col gap-2">
+                <div className="bg-gray-100/60 rounded-2xl px-2 py-1 flex flex-col divide-y divide-gray-200/60">
                   {grouped[program].map((g) => (
                     <GroupCard key={g.id} group={g} onDeleted={fetchGroups} />
                   ))}
