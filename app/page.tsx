@@ -4,9 +4,17 @@ import { useEffect, useState } from "react";
 import { collection, query, where, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/context/AuthContext";
-import { Group, isGroupActive } from "@/lib/groups";
+import { Group, isGroupActive, PROGRAMS, Program } from "@/lib/groups";
 import GroupCard from "@/components/GroupCard";
 import AddGroupModal from "@/components/AddGroupModal";
+
+const PROGRAM_COLORS: Record<Program, string> = {
+  Start:          "text-sky-700",
+  Pro:            "text-violet-700",
+  Momentum:       "text-orange-700",
+  Boost:          "text-green-700",
+  "אימון לאיזון": "text-rose-700",
+};
 
 export default function Home() {
   const { user, loading, signIn, signOut } = useAuth();
@@ -38,6 +46,13 @@ export default function Home() {
     if (user) fetchGroups();
     else setGroups([]);
   }, [user]);
+
+  const grouped = PROGRAMS.reduce<Record<Program, Group[]>>((acc, p) => {
+    acc[p] = groups.filter((g) => g.program === p);
+    return acc;
+  }, {} as Record<Program, Group[]>);
+
+  const activePrograms = PROGRAMS.filter((p) => grouped[p].length > 0);
 
   if (loading) {
     return (
@@ -73,21 +88,18 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-gray-50" dir="rtl">
       <header className="bg-white border-b border-gray-100 sticky top-0 z-10">
-        <div className="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between">
+        <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
           <h1 className="text-2xl font-black text-gray-800">ניהול קבוצות</h1>
           <div className="flex items-center gap-4">
             <span className="text-sm text-gray-400 hidden sm:block">{user.displayName}</span>
-            <button
-              onClick={signOut}
-              className="text-sm text-gray-400 hover:text-gray-600 transition"
-            >
+            <button onClick={signOut} className="text-sm text-gray-400 hover:text-gray-600 transition">
               התנתק
             </button>
           </div>
         </div>
       </header>
 
-      <main className="max-w-4xl mx-auto px-6 py-10">
+      <main className="max-w-5xl mx-auto px-6 py-8">
         <div className="flex items-center justify-between mb-8">
           <p className="text-gray-400 text-sm">
             {groups.length === 0 ? "אין קבוצות פעילות" : `${groups.length} קבוצות פעילות`}
@@ -112,9 +124,20 @@ export default function Home() {
             <p className="text-gray-300 mt-2">לחץ על ״הוסף קבוצה״ כדי להתחיל</p>
           </div>
         ) : (
-          <div className="flex flex-col gap-3">
-            {groups.map((g) => (
-              <GroupCard key={g.id} group={g} onDeleted={fetchGroups} />
+          <div className="flex flex-col gap-8">
+            {activePrograms.map((program) => (
+              <section key={program}>
+                <div className="flex items-center gap-3 mb-3">
+                  <h2 className={`text-lg font-bold ${PROGRAM_COLORS[program]}`}>{program}</h2>
+                  <span className="text-sm text-gray-300">{grouped[program].length} קבוצות</span>
+                  <div className="flex-1 h-px bg-gray-100" />
+                </div>
+                <div className="flex flex-col gap-2">
+                  {grouped[program].map((g) => (
+                    <GroupCard key={g.id} group={g} onDeleted={fetchGroups} />
+                  ))}
+                </div>
+              </section>
             ))}
           </div>
         )}

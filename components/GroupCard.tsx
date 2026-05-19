@@ -30,11 +30,8 @@ export default function GroupCard({ group, onDeleted }: Props) {
 
   return (
     <div className="group relative bg-white rounded-2xl shadow-sm border border-gray-100 px-8 py-5 flex items-center justify-between hover:shadow-md transition-shadow" dir="rtl">
-      <div className="flex items-center gap-5">
-        <span className={`text-base font-bold px-4 py-1.5 rounded-xl border ${colors.bg} ${colors.text} ${colors.border} whitespace-nowrap`}>
-          {group.program}
-        </span>
-        <span className="text-2xl font-bold text-gray-800">{group.name}</span>
+      <div className="flex items-center">
+        <span className="text-xl font-bold text-gray-800">{group.name}</span>
       </div>
 
       <div className="flex items-center gap-4">
