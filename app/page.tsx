@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { collection, query, where, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/context/AuthContext";
-import { Group, isGroupActive, PROGRAMS, Program } from "@/lib/groups";
+import { Group, isGroupActive, getCurrentWeek, PROGRAMS, Program } from "@/lib/groups";
 import AddGroupModal from "@/components/AddGroupModal";
 import ProgramSection from "@/components/ProgramSection";
 
@@ -33,7 +33,7 @@ export default function Home() {
       const snap = await getDocs(q);
       const all = snap.docs
         .map((d) => ({ id: d.id, ...d.data() } as Group))
-        .sort((a, b) => b.createdAt - a.createdAt);
+        .sort((a, b) => (getCurrentWeek(a.startDate, a.program) ?? 0) - (getCurrentWeek(b.startDate, b.program) ?? 0));
       setGroups(all.filter((g) => isGroupActive(g.startDate, g.program)));
     } catch (err) {
       console.error("fetchGroups error:", err);
