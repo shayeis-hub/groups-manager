@@ -33,7 +33,7 @@ export default function Home() {
       const snap = await getDocs(q);
       const all = snap.docs
         .map((d) => ({ id: d.id, ...d.data() } as Group))
-        .sort((a, b) => a.createdAt - b.createdAt);
+        .sort((a, b) => b.createdAt - a.createdAt);
       setGroups(all.filter((g) => isGroupActive(g.startDate, g.program)));
     } catch (err) {
       console.error("fetchGroups error:", err);
