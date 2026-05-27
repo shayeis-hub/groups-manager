@@ -1,4 +1,4 @@
-export type Program = "Start" | "Pro" | "Momentum" | "Boost" | "אימון לאיזון";
+export type Program = "Start" | "Pro" | "Momentum" | "Boost" | "אימון לאיזון" | "Routine" | "VIP";
 
 export const PROGRAM_WEEKS: Record<Program, number> = {
   Start: 13,
@@ -6,9 +6,11 @@ export const PROGRAM_WEEKS: Record<Program, number> = {
   Momentum: 12,
   Boost: 8,
   "אימון לאיזון": 4,
+  Routine: 12,
+  VIP: 13,
 };
 
-export const PROGRAMS: Program[] = ["Start", "Pro", "Momentum", "Boost", "אימון לאיזון"];
+export const PROGRAMS: Program[] = ["Start", "Pro", "Momentum", "Boost", "אימון לאיזון", "Routine", "VIP"];
 
 export interface Group {
   id: string;

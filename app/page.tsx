@@ -14,6 +14,8 @@ const PROGRAM_COLORS: Record<Program, string> = {
   Momentum:       "text-orange-700",
   Boost:          "text-green-700",
   "אימון לאיזון": "text-rose-700",
+  Routine:        "text-teal-700",
+  VIP:            "text-amber-700",
 };
 
 export default function Home() {
