@@ -12,6 +12,15 @@ interface Props {
   onUpdated: () => void;
 }
 
+function WhatsAppIcon() {
+  return (
+    <svg viewBox="0 0 32 32" className="w-5 h-5" fill="none">
+      <circle cx="16" cy="16" r="16" fill="#25D366"/>
+      <path d="M22.5 9.5A9 9 0 0 0 7.1 20.9L6 26l5.3-1.4A9 9 0 1 0 22.5 9.5zm-6.5 13.8a7.4 7.4 0 0 1-3.8-1l-.3-.2-3.1.8.8-3-.2-.3a7.5 7.5 0 1 1 6.6 3.7zm4.1-5.6c-.2-.1-1.4-.7-1.6-.8-.2-.1-.4-.1-.5.1-.2.2-.6.8-.8 1-.1.2-.3.2-.5.1a6.5 6.5 0 0 1-1.9-1.2 7 7 0 0 1-1.3-1.7c-.1-.2 0-.4.1-.5l.4-.5.2-.3v-.3l-.7-1.7c-.2-.4-.4-.4-.5-.4h-.5c-.2 0-.5.1-.7.3-.2.2-.9.9-.9 2.1s.9 2.4 1 2.6c.2.2 1.8 2.7 4.3 3.8.6.3 1.1.4 1.5.5.6.2 1.2.2 1.6.1.5-.1 1.4-.6 1.6-1.1.2-.5.2-1 .1-1.1-.1-.1-.3-.2-.5-.3z" fill="#fff"/>
+    </svg>
+  );
+}
+
 const PROGRAM_COLORS: Record<Program, { bg: string; text: string; border: string }> = {
   Start:          { bg: "bg-sky-100",     text: "text-sky-700",     border: "border-sky-200" },
   Pro:            { bg: "bg-violet-100",  text: "text-violet-700",  border: "border-violet-200" },
@@ -40,19 +49,27 @@ export default function GroupCard({ group, onDeleted, onUpdated }: Props) {
         <span className="text-2xl font-bold text-gray-800">{group.name}</span>
 
         <div className="flex items-center gap-3">
-          {/* WhatsApp button — visible only when link exists */}
+          {/* WhatsApp buttons */}
           {group.whatsappLink && (
             <a
               href={group.whatsappLink}
               target="_blank"
               rel="noopener noreferrer"
-              title="פתח קבוצת ווטסאפ"
+              title={group.program === "Start" ? "ווטסאפ 1" : "פתח קבוצת ווטסאפ"}
               className="flex items-center justify-center w-9 h-9 rounded-full bg-green-50 hover:bg-green-100 transition"
             >
-              <svg viewBox="0 0 32 32" className="w-5 h-5" fill="none">
-                <circle cx="16" cy="16" r="16" fill="#25D366"/>
-                <path d="M22.5 9.5A9 9 0 0 0 7.1 20.9L6 26l5.3-1.4A9 9 0 1 0 22.5 9.5zm-6.5 13.8a7.4 7.4 0 0 1-3.8-1l-.3-.2-3.1.8.8-3-.2-.3a7.5 7.5 0 1 1 6.6 3.7zm4.1-5.6c-.2-.1-1.4-.7-1.6-.8-.2-.1-.4-.1-.5.1-.2.2-.6.8-.8 1-.1.2-.3.2-.5.1a6.5 6.5 0 0 1-1.9-1.2 7 7 0 0 1-1.3-1.7c-.1-.2 0-.4.1-.5l.4-.5.2-.3v-.3l-.7-1.7c-.2-.4-.4-.4-.5-.4h-.5c-.2 0-.5.1-.7.3-.2.2-.9.9-.9 2.1s.9 2.4 1 2.6c.2.2 1.8 2.7 4.3 3.8.6.3 1.1.4 1.5.5.6.2 1.2.2 1.6.1.5-.1 1.4-.6 1.6-1.1.2-.5.2-1 .1-1.1-.1-.1-.3-.2-.5-.3z" fill="#fff"/>
-              </svg>
+              <WhatsAppIcon />
+            </a>
+          )}
+          {group.program === "Start" && group.whatsappLink2 && (
+            <a
+              href={group.whatsappLink2}
+              target="_blank"
+              rel="noopener noreferrer"
+              title="ווטסאפ 2"
+              className="flex items-center justify-center w-9 h-9 rounded-full bg-green-50 hover:bg-green-100 transition"
+            >
+              <WhatsAppIcon />
             </a>
           )}
 

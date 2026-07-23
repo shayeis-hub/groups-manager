@@ -15,6 +15,7 @@ export default function EditGroupModal({ group, onClose, onSaved }: Props) {
   const [name, setName] = useState(group.name);
   const [startDate, setStartDate] = useState(group.startDate);
   const [whatsappLink, setWhatsappLink] = useState(group.whatsappLink ?? "");
+  const [whatsappLink2, setWhatsappLink2] = useState(group.whatsappLink2 ?? "");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -28,6 +29,7 @@ export default function EditGroupModal({ group, onClose, onSaved }: Props) {
         name: name.trim(),
         startDate,
         whatsappLink: whatsappLink.trim() || null,
+        whatsappLink2: group.program === "Start" ? (whatsappLink2.trim() || null) : null,
       });
       onSaved();
       onClose();
@@ -67,7 +69,9 @@ export default function EditGroupModal({ group, onClose, onSaved }: Props) {
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-medium text-gray-600">קישור קבוצת ווטסאפ</label>
+            <label className="text-sm font-medium text-gray-600">
+              {group.program === "Start" ? "קישור ווטסאפ 1" : "קישור קבוצת ווטסאפ"}
+            </label>
             <input
               type="url"
               value={whatsappLink}
@@ -77,6 +81,20 @@ export default function EditGroupModal({ group, onClose, onSaved }: Props) {
               dir="ltr"
             />
           </div>
+
+          {group.program === "Start" && (
+            <div className="flex flex-col gap-1.5">
+              <label className="text-sm font-medium text-gray-600">קישור ווטסאפ 2</label>
+              <input
+                type="url"
+                value={whatsappLink2}
+                onChange={(e) => setWhatsappLink2(e.target.value)}
+                placeholder="https://chat.whatsapp.com/..."
+                className="border border-gray-200 rounded-xl px-4 py-3 text-gray-800 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent transition placeholder:text-gray-300 text-left"
+                dir="ltr"
+              />
+            </div>
+          )}
 
           {error && (
             <p className="text-sm text-red-500 bg-red-50 rounded-lg px-3 py-2">{error}</p>

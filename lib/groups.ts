@@ -20,6 +20,7 @@ export interface Group {
   createdAt: number; // timestamp for sort order
   userId: string;
   whatsappLink?: string;
+  whatsappLink2?: string;
 }
 
 // Returns the Sunday at or before the given date
