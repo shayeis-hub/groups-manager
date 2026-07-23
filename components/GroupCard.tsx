@@ -56,10 +56,10 @@ export default function GroupCard({ group, onDeleted, onUpdated }: Props) {
             </a>
           )}
 
-          {/* Edit button — visible on hover */}
+          {/* Edit button */}
           <button
             onClick={() => setShowEdit(true)}
-            className="opacity-0 group-hover:opacity-100 flex items-center justify-center w-9 h-9 rounded-full hover:bg-gray-100 transition-all text-gray-400 hover:text-gray-600"
+            className="flex items-center justify-center w-9 h-9 rounded-full hover:bg-gray-100 transition-all text-gray-300 hover:text-gray-600"
             title="ערוך קבוצה"
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -74,10 +74,10 @@ export default function GroupCard({ group, onDeleted, onUpdated }: Props) {
             <div className="text-xs text-gray-400 text-center">שבוע</div>
           </div>
 
-          {/* Delete button — visible on hover */}
+          {/* Delete button */}
           <button
             onClick={handleDelete}
-            className="opacity-0 group-hover:opacity-100 text-gray-300 hover:text-red-400 transition-all text-xl leading-none p-1"
+            className="text-gray-300 hover:text-red-400 transition-all text-xl leading-none p-1"
             title="מחק קבוצה"
           >
             ✕
