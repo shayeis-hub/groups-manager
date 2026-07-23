@@ -70,7 +70,7 @@ export default function EditGroupModal({ group, onClose, onSaved }: Props) {
 
           <div className="flex flex-col gap-1.5">
             <label className="text-sm font-medium text-gray-600">
-              {group.program === "Start" ? "קישור ווטסאפ 1" : "קישור קבוצת ווטסאפ"}
+              {group.program === "Start" ? "ווטסאפ START" : "קישור קבוצת ווטסאפ"}
             </label>
             <input
               type="url"
@@ -84,7 +84,7 @@ export default function EditGroupModal({ group, onClose, onSaved }: Props) {
 
           {group.program === "Start" && (
             <div className="flex flex-col gap-1.5">
-              <label className="text-sm font-medium text-gray-600">קישור ווטסאפ 2</label>
+              <label className="text-sm font-medium text-gray-600">ווטסאפ RESTART</label>
               <input
                 type="url"
                 value={whatsappLink2}

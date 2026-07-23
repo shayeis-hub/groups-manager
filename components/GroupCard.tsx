@@ -55,7 +55,7 @@ export default function GroupCard({ group, onDeleted, onUpdated }: Props) {
               href={group.whatsappLink}
               target="_blank"
               rel="noopener noreferrer"
-              title={group.program === "Start" ? "ווטסאפ 1" : "פתח קבוצת ווטסאפ"}
+              title={group.program === "Start" ? "ווטסאפ START" : "פתח קבוצת ווטסאפ"}
               className="flex items-center justify-center w-9 h-9 rounded-full bg-green-50 hover:bg-green-100 transition"
             >
               <WhatsAppIcon />
@@ -66,7 +66,7 @@ export default function GroupCard({ group, onDeleted, onUpdated }: Props) {
               href={group.whatsappLink2}
               target="_blank"
               rel="noopener noreferrer"
-              title="ווטסאפ 2"
+              title="ווטסאפ RESTART"
               className="flex items-center justify-center w-9 h-9 rounded-full bg-green-50 hover:bg-green-100 transition"
             >
               <WhatsAppIcon />
