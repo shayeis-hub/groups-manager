@@ -134,6 +134,7 @@ export default function Home() {
                 groups={grouped[program]}
                 color={PROGRAM_COLORS[program]}
                 onDeleted={fetchGroups}
+                onUpdated={fetchGroups}
               />
             ))}
           </div>

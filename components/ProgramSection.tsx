@@ -9,9 +9,10 @@ interface Props {
   groups: Group[];
   color: string;
   onDeleted: () => void;
+  onUpdated: () => void;
 }
 
-export default function ProgramSection({ program, groups, color, onDeleted }: Props) {
+export default function ProgramSection({ program, groups, color, onDeleted, onUpdated }: Props) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -36,7 +37,7 @@ export default function ProgramSection({ program, groups, color, onDeleted }: Pr
       {open && (
         <div className="flex flex-col gap-3 px-4 pb-4 pt-1">
           {groups.map((g) => (
-            <GroupCard key={g.id} group={g} onDeleted={onDeleted} />
+            <GroupCard key={g.id} group={g} onDeleted={onDeleted} onUpdated={onUpdated} />
           ))}
         </div>
       )}

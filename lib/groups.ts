@@ -19,6 +19,7 @@ export interface Group {
   startDate: string; // ISO date string YYYY-MM-DD
   createdAt: number; // timestamp for sort order
   userId: string;
+  whatsappLink?: string;
 }
 
 // Returns the Sunday at or before the given date
