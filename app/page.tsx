@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { collection, query, where, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/context/AuthContext";
@@ -126,7 +127,7 @@ export default function Home() {
       </header>
 
       <main className="max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6 sm:mb-8">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-3">
           <p className="text-gray-400 text-sm">
             {groups.length === 0 ? "אין קבוצות פעילות" : `${groups.length} קבוצות פעילות`}
           </p>
@@ -148,6 +149,13 @@ export default function Home() {
             </button>
           </div>
         </div>
+
+        <Link
+          href="/sessions"
+          className="block text-center bg-white border border-gray-200 hover:border-indigo-300 hover:bg-indigo-50 text-gray-700 hover:text-indigo-700 font-semibold px-6 py-3 rounded-xl transition shadow-sm mb-6 sm:mb-8"
+        >
+          ממשק ניהול שיחות
+        </Link>
 
         {fetching ? (
           <div className="flex justify-center py-20">

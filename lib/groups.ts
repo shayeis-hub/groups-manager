@@ -30,14 +30,22 @@ function getSunday(date: Date): Date {
   return d;
 }
 
-// Un-clamped 1-based week: < 1 means the cycle hasn't started yet,
-// > totalWeeks means it already ended.
-function getRawWeek(startDate: string): number {
+// Un-clamped 1-based week for `referenceDate` (defaults to today) relative to
+// startDate: < 1 means the cycle hadn't started yet, > totalWeeks means it
+// had already ended by that date.
+function getRawWeek(startDate: string, referenceDate: Date = new Date()): number {
   const startSunday = getSunday(new Date(startDate + "T00:00:00"));
-  const nowSunday = getSunday(new Date());
+  const refSunday = getSunday(referenceDate);
 
-  const diffMs = nowSunday.getTime() - startSunday.getTime();
+  const diffMs = refSunday.getTime() - startSunday.getTime();
   return Math.floor(diffMs / (7 * 24 * 60 * 60 * 1000)) + 1;
+}
+
+// Which program-week a given date (e.g. a logged session's date) fell in.
+// Not clamped to the program's total length — a session logged after the
+// program's official end still reports a real week number.
+export function getWeekForDate(startDate: string, dateISO: string): number {
+  return getRawWeek(startDate, new Date(dateISO + "T00:00:00"));
 }
 
 // Returns current week number (1-based). Returns null if the program hasn't
