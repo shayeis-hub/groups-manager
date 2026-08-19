@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useParams } from "next/navigation";
 import {
-  collection, doc, getDoc, getDocs, addDoc, deleteDoc,
+  collection, doc, getDoc, getDocs, addDoc, updateDoc, deleteDoc,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/context/AuthContext";
@@ -30,6 +30,10 @@ export default function ClientPage() {
   const [draftDate, setDraftDate] = useState("");
   const [draftText, setDraftText] = useState("");
   const [saving, setSaving] = useState(false);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editText, setEditText] = useState("");
+  const [editSaving, setEditSaving] = useState(false);
 
   const fetchAll = async () => {
     if (!user) return;
@@ -76,12 +80,13 @@ export default function ClientPage() {
     if (!composing || !draftText.trim()) return;
     setSaving(true);
     try {
-      await addDoc(collection(db, "clients", clientId, composing), {
+      const ref = await addDoc(collection(db, "clients", clientId, composing), {
         date: draftDate,
         text: draftText.trim(),
         createdAt: Date.now(),
       });
       setComposing(null);
+      setExpandedId(ref.id);
       await fetchAll();
     } finally {
       setSaving(false);
@@ -91,7 +96,27 @@ export default function ClientPage() {
   const deleteSession = async (kind: SessionKind, sessionId: string) => {
     if (!confirm("למחוק את הסיכום הזה?")) return;
     await deleteDoc(doc(db, "clients", clientId, kind, sessionId));
+    setExpandedId((id) => (id === sessionId ? null : id));
     await fetchAll();
+  };
+
+  const startEditSession = (session: Session) => {
+    setEditingId(session.id);
+    setEditText(session.text);
+  };
+
+  const saveEditSession = async (kind: SessionKind, sessionId: string) => {
+    if (!editText.trim()) return;
+    setEditSaving(true);
+    try {
+      await updateDoc(doc(db, "clients", clientId, kind, sessionId), {
+        text: editText.trim(),
+      });
+      setEditingId(null);
+      await fetchAll();
+    } finally {
+      setEditSaving(false);
+    }
   };
 
   const deleteClient = async () => {
@@ -219,21 +244,80 @@ export default function ClientPage() {
             {sessions[kind].length === 0 ? (
               <p className="text-gray-300 text-sm py-4 text-center">אין עדיין שיחות מתועדות</p>
             ) : (
-              <div className="flex flex-col gap-3">
-                {sessions[kind].map((s) => (
-                  <div key={s.id} className="border border-gray-100 rounded-xl px-4 py-3">
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-xs text-gray-400">{s.date}</span>
+              <div className="flex flex-col gap-2">
+                {sessions[kind].map((s, i) => {
+                  const number = sessions[kind].length - i; // oldest session = 1
+                  const isOpen = expandedId === s.id;
+                  return (
+                    <div key={s.id} className="border border-gray-100 rounded-xl overflow-hidden">
                       <button
-                        onClick={() => deleteSession(kind, s.id)}
-                        className="text-gray-300 hover:text-red-400 transition text-sm leading-none"
+                        onClick={() => setExpandedId(isOpen ? null : s.id)}
+                        className="w-full flex items-center justify-between gap-3 px-4 py-3 hover:bg-gray-50 transition-colors text-right"
                       >
-                        ✕
+                        <span className="text-sm font-medium text-gray-700">
+                          שיחה מספר {number}
+                        </span>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <span className="text-xs text-gray-400">{s.date}</span>
+                          <svg
+                            className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}
+                            fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
+                          >
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                          </svg>
+                        </div>
                       </button>
+
+                      {isOpen && (
+                        <div className="px-4 pb-3 pt-1 border-t border-gray-100">
+                          {editingId === s.id ? (
+                            <div className="flex flex-col gap-2 pt-2">
+                              <textarea
+                                value={editText}
+                                onChange={(e) => setEditText(e.target.value)}
+                                rows={4}
+                                className="border border-gray-200 rounded-lg px-3 py-2 text-gray-800 bg-white resize-y"
+                              />
+                              <div className="flex gap-2">
+                                <button
+                                  onClick={() => saveEditSession(kind, s.id)}
+                                  disabled={editSaving}
+                                  className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-5 py-2 rounded-lg text-sm transition disabled:opacity-50"
+                                >
+                                  {editSaving ? "שומר..." : "שמור"}
+                                </button>
+                                <button
+                                  onClick={() => setEditingId(null)}
+                                  className="bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold px-5 py-2 rounded-lg text-sm transition"
+                                >
+                                  ביטול
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <>
+                              <div className="flex justify-end gap-3 mb-1">
+                                <button
+                                  onClick={() => startEditSession(s)}
+                                  className="text-gray-300 hover:text-indigo-500 transition text-sm"
+                                >
+                                  עריכה
+                                </button>
+                                <button
+                                  onClick={() => deleteSession(kind, s.id)}
+                                  className="text-gray-300 hover:text-red-400 transition text-sm leading-none"
+                                >
+                                  ✕
+                                </button>
+                              </div>
+                              <p className="text-gray-800 whitespace-pre-wrap">{s.text}</p>
+                            </>
+                          )}
+                        </div>
+                      )}
                     </div>
-                    <p className="text-gray-800 whitespace-pre-wrap">{s.text}</p>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </section>
