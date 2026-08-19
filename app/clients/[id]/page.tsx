@@ -168,7 +168,7 @@ export default function ClientPage() {
             <div className="min-w-0">
               <h1 className="text-xl sm:text-2xl font-black text-gray-800 break-words">{client.name}</h1>
               <p className="text-sm text-gray-400 break-words">
-                {group ? `${group.name} · ` : ""}
+                {group ? `${group.program} · ${group.name} · ` : ""}
                 {week ? `שבוע ${week} מתוך ${total}` : "התוכנית הסתיימה"}
               </p>
             </div>

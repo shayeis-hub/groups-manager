@@ -110,7 +110,7 @@ export default function SessionsOverviewPage() {
               >
                 <div className="flex items-center justify-between gap-3 mb-2">
                   <span className="text-lg font-bold text-gray-800 min-w-0 break-words">{client.name}</span>
-                  <span className="text-xs text-gray-400 shrink-0 whitespace-nowrap">{group.name}</span>
+                  <span className="text-xs text-gray-400 shrink-0 whitespace-nowrap">{group.program} · {group.name}</span>
                 </div>
                 <div className="flex flex-col gap-1 text-sm">
                   <p className="text-gray-600">
