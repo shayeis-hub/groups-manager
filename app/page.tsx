@@ -4,8 +4,9 @@ import { useEffect, useState } from "react";
 import { collection, query, where, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/context/AuthContext";
-import { Group, isGroupActive, getCurrentWeek, PROGRAMS, Program } from "@/lib/groups";
+import { Group, isGroupActive, canAssignClients, getCurrentWeek, PROGRAMS, Program } from "@/lib/groups";
 import AddGroupModal from "@/components/AddGroupModal";
+import AddClientModal from "@/components/AddClientModal";
 import ProgramSection from "@/components/ProgramSection";
 
 const PROGRAM_COLORS: Record<Program, string> = {
@@ -21,8 +22,11 @@ const PROGRAM_COLORS: Record<Program, string> = {
 export default function Home() {
   const { user, loading, signIn, signOut } = useAuth();
   const [groups, setGroups] = useState<Group[]>([]);
+  const [assignableGroups, setAssignableGroups] = useState<Group[]>([]);
+  const [clientCounts, setClientCounts] = useState<Record<string, number>>({});
   const [fetching, setFetching] = useState(false);
   const [showModal, setShowModal] = useState(false);
+  const [showClientModal, setShowClientModal] = useState(false);
 
   const fetchGroups = async () => {
     if (!user) return;
@@ -37,6 +41,26 @@ export default function Home() {
         .map((d) => ({ id: d.id, ...d.data() } as Group))
         .sort((a, b) => (getCurrentWeek(a.startDate, a.program) ?? 0) - (getCurrentWeek(b.startDate, b.program) ?? 0));
       setGroups(all.filter((g) => isGroupActive(g.startDate, g.program)));
+
+      // Cards on this page show running cycles only, but a new client can also
+      // be pre-assigned to a cycle that hasn't started yet (finished ones can't).
+      setAssignableGroups(
+        all
+          .filter((g) => canAssignClients(g.startDate, g.program))
+          .sort((a, b) => b.startDate.localeCompare(a.startDate)) // newest cycle first
+      );
+
+      // How many coaching clients each group has — drives whether the
+      // "לקוחות ליווי" button shows on that group's card at all.
+      const clientSnap = await getDocs(
+        query(collection(db, "clients"), where("userId", "==", user.uid))
+      );
+      const counts: Record<string, number> = {};
+      clientSnap.docs.forEach((d) => {
+        const gid = d.data().groupId as string;
+        counts[gid] = (counts[gid] ?? 0) + 1;
+      });
+      setClientCounts(counts);
     } catch (err) {
       console.error("fetchGroups error:", err);
     } finally {
@@ -90,8 +114,8 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-gray-50" dir="rtl">
       <header className="bg-white border-b border-gray-100 sticky top-0 z-10">
-        <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
-          <h1 className="text-2xl font-black text-gray-800">ניהול קבוצות</h1>
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between gap-3">
+          <h1 className="text-xl sm:text-2xl font-black text-gray-800">ניהול קבוצות</h1>
           <div className="flex items-center gap-4">
             <span className="text-sm text-gray-400 hidden sm:block">{user.displayName}</span>
             <button onClick={signOut} className="text-sm text-gray-400 hover:text-gray-600 transition">
@@ -101,18 +125,28 @@ export default function Home() {
         </div>
       </header>
 
-      <main className="max-w-5xl mx-auto px-6 py-8">
-        <div className="flex items-center justify-between mb-8">
+      <main className="max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6 sm:mb-8">
           <p className="text-gray-400 text-sm">
             {groups.length === 0 ? "אין קבוצות פעילות" : `${groups.length} קבוצות פעילות`}
           </p>
-          <button
-            onClick={() => setShowModal(true)}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-6 py-3 rounded-xl transition flex items-center gap-2 shadow-sm"
-          >
-            <span className="text-xl leading-none">+</span>
-            הוסף קבוצה
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setShowClientModal(true)}
+              disabled={assignableGroups.length === 0}
+              className="flex-1 sm:flex-none justify-center bg-white border border-indigo-200 text-indigo-700 hover:bg-indigo-50 font-semibold px-4 sm:px-6 py-3 rounded-xl transition flex items-center gap-2 shadow-sm disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap"
+            >
+              <span className="text-xl leading-none">+</span>
+              הוסף לקוח ליווי
+            </button>
+            <button
+              onClick={() => setShowModal(true)}
+              className="flex-1 sm:flex-none justify-center bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-4 sm:px-6 py-3 rounded-xl transition flex items-center gap-2 shadow-sm whitespace-nowrap"
+            >
+              <span className="text-xl leading-none">+</span>
+              הוסף קבוצה
+            </button>
+          </div>
         </div>
 
         {fetching ? (
@@ -133,6 +167,7 @@ export default function Home() {
                 program={program}
                 groups={grouped[program]}
                 color={PROGRAM_COLORS[program]}
+                clientCounts={clientCounts}
                 onDeleted={fetchGroups}
                 onUpdated={fetchGroups}
               />
@@ -143,6 +178,14 @@ export default function Home() {
 
       {showModal && (
         <AddGroupModal onClose={() => setShowModal(false)} onAdded={fetchGroups} />
+      )}
+
+      {showClientModal && (
+        <AddClientModal
+          groups={assignableGroups}
+          onClose={() => setShowClientModal(false)}
+          onAdded={fetchGroups}
+        />
       )}
     </div>
   );

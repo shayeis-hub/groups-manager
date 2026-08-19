@@ -8,18 +8,19 @@ interface Props {
   program: Program;
   groups: Group[];
   color: string;
+  clientCounts: Record<string, number>;
   onDeleted: () => void;
   onUpdated: () => void;
 }
 
-export default function ProgramSection({ program, groups, color, onDeleted, onUpdated }: Props) {
+export default function ProgramSection({ program, groups, color, clientCounts, onDeleted, onUpdated }: Props) {
   const [open, setOpen] = useState(false);
 
   return (
     <div className="rounded-2xl border border-gray-100 overflow-hidden bg-white shadow-sm">
       <button
         onClick={() => setOpen((o) => !o)}
-        className="w-full flex items-center justify-between px-6 py-4 hover:bg-gray-50 transition-colors"
+        className="w-full flex items-center justify-between px-5 sm:px-6 py-4 hover:bg-gray-50 transition-colors"
         dir="rtl"
       >
         <div className="flex items-center gap-3">
@@ -35,9 +36,15 @@ export default function ProgramSection({ program, groups, color, onDeleted, onUp
       </button>
 
       {open && (
-        <div className="flex flex-col gap-3 px-4 pb-4 pt-1">
+        <div className="flex flex-col gap-3 px-3 sm:px-4 pb-4 pt-1">
           {groups.map((g) => (
-            <GroupCard key={g.id} group={g} onDeleted={onDeleted} onUpdated={onUpdated} />
+            <GroupCard
+              key={g.id}
+              group={g}
+              clientCount={clientCounts[g.id] ?? 0}
+              onDeleted={onDeleted}
+              onUpdated={onUpdated}
+            />
           ))}
         </div>
       )}

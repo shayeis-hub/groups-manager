@@ -19,8 +19,6 @@ export interface Group {
   startDate: string; // ISO date string YYYY-MM-DD
   createdAt: number; // timestamp for sort order
   userId: string;
-  whatsappLink?: string;
-  whatsappLink2?: string;
 }
 
 // Returns the Sunday at or before the given date
@@ -32,21 +30,35 @@ function getSunday(date: Date): Date {
   return d;
 }
 
-// Returns current week number (1-based). Returns null if program has ended.
-export function getCurrentWeek(startDate: string, program: Program): number | null {
-  const totalWeeks = PROGRAM_WEEKS[program];
-  const start = new Date(startDate + "T00:00:00");
-  const startSunday = getSunday(start);
+// Un-clamped 1-based week: < 1 means the cycle hasn't started yet,
+// > totalWeeks means it already ended.
+function getRawWeek(startDate: string): number {
+  const startSunday = getSunday(new Date(startDate + "T00:00:00"));
   const nowSunday = getSunday(new Date());
 
   const diffMs = nowSunday.getTime() - startSunday.getTime();
-  const diffWeeks = Math.floor(diffMs / (7 * 24 * 60 * 60 * 1000));
-  const week = diffWeeks + 1;
+  return Math.floor(diffMs / (7 * 24 * 60 * 60 * 1000)) + 1;
+}
 
-  if (week < 1 || week > totalWeeks) return null;
+// Returns current week number (1-based). Returns null if the program hasn't
+// started yet or has already ended.
+export function getCurrentWeek(startDate: string, program: Program): number | null {
+  const week = getRawWeek(startDate);
+  if (week < 1 || week > PROGRAM_WEEKS[program]) return null;
   return week;
 }
 
 export function isGroupActive(startDate: string, program: Program): boolean {
   return getCurrentWeek(startDate, program) !== null;
+}
+
+// Cycle whose start date is still in the future.
+export function isGroupUpcoming(startDate: string): boolean {
+  return getRawWeek(startDate) < 1;
+}
+
+// Groups a new client can be assigned to: currently running or not yet started.
+// Finished cycles are deliberately excluded.
+export function canAssignClients(startDate: string, program: Program): boolean {
+  return isGroupActive(startDate, program) || isGroupUpcoming(startDate);
 }

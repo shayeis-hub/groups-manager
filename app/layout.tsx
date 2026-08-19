@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import ClientProviders from "@/components/ClientProviders";
@@ -11,6 +11,11 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: "ניהול קבוצות",
   description: "מערכת לניהול קבוצות אימון",
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
 };
 
 export default function RootLayout({
