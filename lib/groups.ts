@@ -12,6 +12,16 @@ export const PROGRAM_WEEKS: Record<Program, number> = {
 
 export const PROGRAMS: Program[] = ["Start", "Pro", "Momentum", "Boost", "אימון לאיזון", "Routine", "VIP"];
 
+export const PROGRAM_COLORS: Record<Program, { bg: string; text: string; border: string }> = {
+  Start:          { bg: "bg-sky-100",     text: "text-sky-700",     border: "border-sky-200" },
+  Pro:            { bg: "bg-violet-100",  text: "text-violet-700",  border: "border-violet-200" },
+  Momentum:       { bg: "bg-orange-100",  text: "text-orange-700",  border: "border-orange-200" },
+  Boost:          { bg: "bg-green-100",   text: "text-green-700",   border: "border-green-200" },
+  "אימון לאיזון": { bg: "bg-rose-100",    text: "text-rose-700",    border: "border-rose-200" },
+  Routine:        { bg: "bg-teal-100",    text: "text-teal-700",    border: "border-teal-200" },
+  VIP:            { bg: "bg-amber-100",   text: "text-amber-700",   border: "border-amber-200" },
+};
+
 export interface Group {
   id: string;
   name: string;

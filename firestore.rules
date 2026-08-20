@@ -4,7 +4,7 @@ service cloud.firestore {
     // Mirror lib/dietitians.ts DIETITIANS emails exactly — this is the real
     // enforcement, the client-side list is only a UI-routing convenience.
     function isDietitian() {
-      return request.auth != null && request.auth.token.email in [];
+      return request.auth != null && request.auth.token.email in ['galit.g@leptin4life.com', 'rotem.st@leptin4life.com', 'shayeis@gmail.com'];
     }
 
     match /groups/{groupId} {

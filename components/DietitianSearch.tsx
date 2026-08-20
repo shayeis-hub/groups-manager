@@ -5,7 +5,7 @@ import Link from "next/link";
 import { collection, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/context/AuthContext";
-import { Group } from "@/lib/groups";
+import { Group, PROGRAM_COLORS } from "@/lib/groups";
 import { Client } from "@/lib/clients";
 
 interface GroupWithClients {
@@ -79,7 +79,7 @@ export default function DietitianSearch() {
     <div className="min-h-screen bg-gray-50" dir="rtl">
       <header className="bg-white border-b border-gray-100 sticky top-0 z-10">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between gap-3">
-          <h1 className="text-xl sm:text-2xl font-black text-gray-800">חיפוש לקוחות</h1>
+          <h1 className="text-xl sm:text-2xl font-black text-gray-800">ממשק תזונאית</h1>
           <div className="flex items-center gap-4">
             <span className="text-sm text-gray-400 hidden sm:block">{user?.displayName}</span>
             <button onClick={signOut} className="text-sm text-gray-400 hover:text-gray-600 transition">
@@ -95,7 +95,7 @@ export default function DietitianSearch() {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="חיפוש לפי שם לקוח, מאמן, או תוכנית..."
-          className="w-full border border-gray-200 rounded-xl px-4 py-3 text-gray-800 bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent transition placeholder:text-gray-300 mb-6"
+          className="w-full border-2 border-gray-200 rounded-xl px-5 py-4 text-lg font-semibold text-gray-800 bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent transition placeholder:text-gray-400 placeholder:font-normal mb-6"
         />
 
         {fetching ? (
@@ -108,14 +108,16 @@ export default function DietitianSearch() {
           </p>
         ) : (
           <div className="flex flex-col gap-3">
-            {results.map(({ group, clients }) => (
-              <div key={group.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 px-5 sm:px-6 py-4">
-                <div className="flex items-center justify-between gap-3 mb-3">
-                  <span className="text-sm font-semibold text-gray-800">
-                    {group.coachName || "ללא מאמן משויך"}
-                  </span>
-                  <span className="text-xs text-gray-400 shrink-0 whitespace-nowrap">
+            {results.map(({ group, clients }) => {
+              const colors = PROGRAM_COLORS[group.program];
+              return (
+              <div key={group.id} className={`bg-white rounded-2xl shadow-sm border-2 ${colors.border} px-5 sm:px-6 py-4`}>
+                <div className="flex items-center justify-between gap-3 mb-3 flex-wrap">
+                  <span className={`text-xl sm:text-2xl font-black ${colors.text}`}>
                     {group.program} · {group.name}
+                  </span>
+                  <span className="text-sm font-medium text-gray-400 shrink-0 whitespace-nowrap">
+                    {group.coachName || "ללא מאמן משויך"}
                   </span>
                 </div>
                 <div className="flex flex-wrap gap-2">
@@ -130,7 +132,8 @@ export default function DietitianSearch() {
                   ))}
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </main>
