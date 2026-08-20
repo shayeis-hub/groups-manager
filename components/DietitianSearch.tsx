@@ -132,29 +132,34 @@ export default function DietitianSearch() {
               const colors = PROGRAM_COLORS[group.program];
               const isOpen = isSearching || openIds.has(group.id);
               return (
-              <div key={group.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow overflow-hidden">
+              <div key={group.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow" dir="rtl">
                 <button
                   onClick={() => toggleOpen(group.id)}
-                  className="w-full flex items-center justify-between gap-3 px-5 sm:px-8 py-4 sm:py-5 flex-wrap hover:bg-gray-50 transition-colors"
-                  dir="rtl"
+                  className="w-full flex items-center justify-between gap-3 px-5 py-4 sm:px-8 sm:py-5"
                 >
-                  <div className="flex items-center gap-3 flex-wrap">
-                    <span className={`text-sm font-semibold px-2.5 py-1 rounded-lg border shrink-0 ${colors.bg} ${colors.text} ${colors.border}`}>
-                      {group.program}
-                    </span>
-                    <span className="text-xl sm:text-2xl font-bold text-gray-800 min-w-0 break-words">
+                  <div className="min-w-0 text-right">
+                    <div className="text-xl sm:text-2xl font-bold text-gray-800 break-words">
                       {group.name}
-                    </span>
-                    <span className="text-sm font-medium text-gray-400 shrink-0 whitespace-nowrap">
-                      {group.coachName || "ללא מאמן משויך"}
-                    </span>
+                    </div>
+                    <div className="text-sm text-gray-400 mt-0.5">
+                      {group.program} · {group.coachName || "ללא מאמן משויך"}
+                    </div>
                   </div>
-                  <svg
-                    className={`w-5 h-5 text-gray-400 transition-transform duration-200 shrink-0 ${isOpen ? "rotate-180" : ""}`}
-                    fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                  </svg>
+
+                  <div className="flex items-center gap-3 shrink-0">
+                    <span
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-semibold border whitespace-nowrap ${colors.bg} ${colors.text} ${colors.border}`}
+                    >
+                      <span className="opacity-70">{clients.length}</span>
+                      לקוחות
+                    </span>
+                    <svg
+                      className={`w-5 h-5 text-gray-400 transition-transform duration-200 shrink-0 ${isOpen ? "rotate-180" : ""}`}
+                      fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </div>
                 </button>
 
                 {isOpen && (
