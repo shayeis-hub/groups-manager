@@ -5,7 +5,7 @@ import Link from "next/link";
 import { collection, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/context/AuthContext";
-import { Group, PROGRAM_COLORS } from "@/lib/groups";
+import { Group, PROGRAM_COLORS, isGroupActive } from "@/lib/groups";
 import { Client } from "@/lib/clients";
 
 interface GroupWithClients {
@@ -18,6 +18,14 @@ export default function DietitianSearch() {
   const [rows, setRows] = useState<GroupWithClients[]>([]);
   const [fetching, setFetching] = useState(true);
   const [search, setSearch] = useState("");
+  const [openIds, setOpenIds] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    document.title = "ממשק תזונאית - מערכת ליווי לקוחות";
+    return () => {
+      document.title = "ניהול קבוצות";
+    };
+  }, []);
 
   useEffect(() => {
     const run = async () => {
@@ -34,6 +42,7 @@ export default function DietitianSearch() {
         const clients = clientSnap.docs.map((d) => ({ id: d.id, ...d.data() } as Client));
 
         const built = groups
+          .filter((group) => isGroupActive(group.startDate, group.program))
           .map((group) => ({
             group,
             clients: clients
@@ -56,6 +65,8 @@ export default function DietitianSearch() {
     run();
   }, []);
 
+  const isSearching = search.trim().length > 0;
+
   const results = useMemo(() => {
     const term = search.trim().toLowerCase();
     if (!term) return rows;
@@ -74,6 +85,15 @@ export default function DietitianSearch() {
       })
       .filter((r): r is GroupWithClients => r !== null);
   }, [rows, search]);
+
+  const toggleOpen = (groupId: string) => {
+    setOpenIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(groupId)) next.delete(groupId);
+      else next.add(groupId);
+      return next;
+    });
+  };
 
   return (
     <div className="min-h-screen bg-gray-50" dir="rtl">
@@ -110,27 +130,43 @@ export default function DietitianSearch() {
           <div className="flex flex-col gap-3">
             {results.map(({ group, clients }) => {
               const colors = PROGRAM_COLORS[group.program];
+              const isOpen = isSearching || openIds.has(group.id);
               return (
-              <div key={group.id} className={`bg-white rounded-2xl shadow-sm border-2 ${colors.border} px-5 sm:px-6 py-4`}>
-                <div className="flex items-center justify-between gap-3 mb-3 flex-wrap">
-                  <span className={`text-xl sm:text-2xl font-black ${colors.text}`}>
-                    {group.program} · {group.name}
-                  </span>
-                  <span className="text-sm font-medium text-gray-400 shrink-0 whitespace-nowrap">
-                    {group.coachName || "ללא מאמן משויך"}
-                  </span>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {clients.map((c) => (
-                    <Link
-                      key={c.id}
-                      href={`/clients/${c.id}`}
-                      className="text-sm font-medium text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded-full px-3 py-1.5 transition"
-                    >
-                      {c.name}
-                    </Link>
-                  ))}
-                </div>
+              <div key={group.id} className={`bg-white rounded-2xl shadow-sm border-2 ${colors.border} overflow-hidden`}>
+                <button
+                  onClick={() => toggleOpen(group.id)}
+                  className="w-full flex items-center justify-between gap-3 px-5 sm:px-6 py-4 flex-wrap hover:bg-gray-50 transition-colors"
+                  dir="rtl"
+                >
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <span className={`text-xl sm:text-2xl font-bold ${colors.text}`}>
+                      {group.program} · {group.name}
+                    </span>
+                    <span className="text-sm font-medium text-gray-400 shrink-0 whitespace-nowrap">
+                      {group.coachName || "ללא מאמן משויך"}
+                    </span>
+                  </div>
+                  <svg
+                    className={`w-5 h-5 text-gray-400 transition-transform duration-200 shrink-0 ${isOpen ? "rotate-180" : ""}`}
+                    fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+
+                {isOpen && (
+                  <div className="flex flex-wrap gap-2 px-5 sm:px-6 pb-4">
+                    {clients.map((c) => (
+                      <Link
+                        key={c.id}
+                        href={`/clients/${c.id}`}
+                        className="text-sm font-medium text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded-full px-3 py-1.5 transition"
+                      >
+                        {c.name}
+                      </Link>
+                    ))}
+                  </div>
+                )}
               </div>
               );
             })}
