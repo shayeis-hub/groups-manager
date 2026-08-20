@@ -103,31 +103,42 @@ export default function SessionsOverviewPage() {
         ) : (
           <div className="flex flex-col gap-3">
             {rows.map(({ client, group, currentWeek, lastCoachWeek, lastDietitianWeek }) => (
-              <Link
+              <div
                 key={client.id}
-                href={`/clients/${client.id}`}
-                className="block bg-white rounded-2xl shadow-sm border border-gray-100 px-5 sm:px-6 py-4 hover:shadow-md transition-shadow"
+                className="bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow"
               >
-                <div className="flex items-center justify-between gap-3 mb-2">
-                  <span className="text-lg font-bold text-gray-800 min-w-0 break-words">{client.name}</span>
-                  <span className="text-xs text-gray-400 shrink-0 whitespace-nowrap">{group.program} · {group.name}</span>
-                </div>
-                <div className="flex flex-col gap-1 text-sm">
-                  <p className="text-gray-600">
-                    שבוע נוכחי בתוכנית: <span className="font-semibold text-gray-800">{currentWeek}</span>
-                  </p>
-                  <p className={lastCoachWeek === null ? "text-red-500" : "text-gray-600"}>
-                    {lastCoachWeek === null
-                      ? "אין עדיין שיחה עם מאמן"
-                      : <>שיחה אחרונה עם מאמן בוצעה בשבוע: <span className="font-semibold text-gray-800">{lastCoachWeek}</span></>}
-                  </p>
-                  <p className={lastDietitianWeek === null ? "text-red-500" : "text-gray-600"}>
-                    {lastDietitianWeek === null
-                      ? "אין עדיין שיחה עם תזונאית"
-                      : <>שיחה אחרונה עם תזונאית בוצעה בשבוע: <span className="font-semibold text-gray-800">{lastDietitianWeek}</span></>}
-                  </p>
-                </div>
-              </Link>
+                <Link href={`/clients/${client.id}`} className="block px-5 sm:px-6 py-4">
+                  <div className="flex items-center justify-between gap-3 mb-2">
+                    <span className="text-lg font-bold text-gray-800 min-w-0 break-words">{client.name}</span>
+                    <span className="text-xs text-gray-400 shrink-0 whitespace-nowrap">{group.program} · {group.name}</span>
+                  </div>
+                  <div className="flex flex-col gap-1 text-sm">
+                    <p className="text-gray-600">
+                      שבוע נוכחי בתוכנית: <span className="font-semibold text-gray-800">{currentWeek}</span>
+                    </p>
+                    <p className={lastCoachWeek === null ? "text-red-500" : "text-gray-600"}>
+                      {lastCoachWeek === null
+                        ? "אין עדיין שיחה עם מאמן"
+                        : <>שיחה אחרונה עם מאמן בוצעה בשבוע: <span className="font-semibold text-gray-800">{lastCoachWeek}</span></>}
+                    </p>
+                    <p className={lastDietitianWeek === null ? "text-red-500" : "text-gray-600"}>
+                      {lastDietitianWeek === null
+                        ? "אין עדיין שיחה עם תזונאית"
+                        : <>שיחה אחרונה עם תזונאית בוצעה בשבוע: <span className="font-semibold text-gray-800">{lastDietitianWeek}</span></>}
+                    </p>
+                  </div>
+                </Link>
+                {client.portalUrl && (
+                  <a
+                    href={client.portalUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-center gap-1.5 border-t border-gray-100 px-5 sm:px-6 py-2.5 text-sm font-semibold text-indigo-600 hover:bg-indigo-50 transition rounded-b-2xl"
+                  >
+                    כרטיס לקוח ↗
+                  </a>
+                )}
+              </div>
             ))}
           </div>
         )}
