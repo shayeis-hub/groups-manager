@@ -10,6 +10,7 @@ import { db } from "@/lib/firebase";
 import { useAuth } from "@/context/AuthContext";
 import { Group, getCurrentWeek, PROGRAM_WEEKS } from "@/lib/groups";
 import { Client, Session, SessionKind, SESSION_LABELS } from "@/lib/clients";
+import { isDietitianEmail } from "@/lib/dietitians";
 
 const KINDS: SessionKind[] = ["dietitianSessions", "coachSessions"];
 
@@ -18,6 +19,7 @@ export default function ClientPage() {
   const clientId = params.id;
   const router = useRouter();
   const { user, loading } = useAuth();
+  const isDietitian = isDietitianEmail(user?.email);
 
   const [client, setClient] = useState<Client | null>(null);
   const [group, setGroup] = useState<Group | null>(null);
@@ -185,12 +187,14 @@ export default function ClientPage() {
                 כרטיס לקוח ↗
               </a>
             )}
-            <button
-              onClick={deleteClient}
-              className="text-sm text-gray-400 hover:text-red-400 transition whitespace-nowrap"
-            >
-              מחק לקוח
-            </button>
+            {!isDietitian && (
+              <button
+                onClick={deleteClient}
+                className="text-sm text-gray-400 hover:text-red-400 transition whitespace-nowrap"
+              >
+                מחק לקוח
+              </button>
+            )}
           </div>
         </div>
       </header>
@@ -200,12 +204,14 @@ export default function ClientPage() {
           <section key={kind} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 sm:p-6">
             <div className="flex items-center justify-between gap-3 mb-4">
               <h2 className="text-base sm:text-lg font-bold text-gray-800">{SESSION_LABELS[kind]}</h2>
-              <button
-                onClick={() => openComposer(kind)}
-                className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-4 py-2 rounded-xl text-sm transition whitespace-nowrap shrink-0"
-              >
-                + הוסף שיחה
-              </button>
+              {(!isDietitian || kind === "dietitianSessions") && (
+                <button
+                  onClick={() => openComposer(kind)}
+                  className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-4 py-2 rounded-xl text-sm transition whitespace-nowrap shrink-0"
+                >
+                  + הוסף שיחה
+                </button>
+              )}
             </div>
 
             {composing === kind && (
@@ -270,7 +276,9 @@ export default function ClientPage() {
 
                       {isOpen && (
                         <div className="px-4 pb-3 pt-1 border-t border-gray-100">
-                          {editingId === s.id ? (
+                          {isDietitian ? (
+                            <p className="text-gray-800 whitespace-pre-wrap pt-2">{s.text}</p>
+                          ) : editingId === s.id ? (
                             <div className="flex flex-col gap-2 pt-2">
                               <textarea
                                 value={editText}

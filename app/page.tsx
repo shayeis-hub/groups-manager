@@ -6,9 +6,11 @@ import { collection, query, where, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/context/AuthContext";
 import { Group, isGroupActive, canAssignClients, getCurrentWeek, PROGRAMS, Program } from "@/lib/groups";
+import { isDietitianEmail } from "@/lib/dietitians";
 import AddGroupModal from "@/components/AddGroupModal";
 import AddClientModal from "@/components/AddClientModal";
 import ProgramSection from "@/components/ProgramSection";
+import DietitianSearch from "@/components/DietitianSearch";
 
 const PROGRAM_COLORS: Record<Program, string> = {
   Start:          "text-sky-700",
@@ -22,6 +24,7 @@ const PROGRAM_COLORS: Record<Program, string> = {
 
 export default function Home() {
   const { user, loading, signIn, signOut } = useAuth();
+  const isDietitian = isDietitianEmail(user?.email);
   const [groups, setGroups] = useState<Group[]>([]);
   const [assignableGroups, setAssignableGroups] = useState<Group[]>([]);
   const [clientCounts, setClientCounts] = useState<Record<string, number>>({});
@@ -30,7 +33,7 @@ export default function Home() {
   const [showClientModal, setShowClientModal] = useState(false);
 
   const fetchGroups = async () => {
-    if (!user) return;
+    if (!user || isDietitian) return;
     setFetching(true);
     try {
       const q = query(
@@ -70,9 +73,9 @@ export default function Home() {
   };
 
   useEffect(() => {
-    if (user) fetchGroups();
+    if (user && !isDietitian) fetchGroups();
     else setGroups([]);
-  }, [user]);
+  }, [user, isDietitian]);
 
   const grouped = PROGRAMS.reduce<Record<Program, Group[]>>((acc, p) => {
     acc[p] = groups.filter((g) => g.program === p);
@@ -110,6 +113,10 @@ export default function Home() {
         </button>
       </div>
     );
+  }
+
+  if (isDietitian) {
+    return <DietitianSearch />;
   }
 
   return (

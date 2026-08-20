@@ -17,6 +17,7 @@ export interface Group {
   name: string;
   program: Program;
   startDate: string; // ISO date string YYYY-MM-DD
+  coachName?: string; // free text — groups created before this field don't have one yet
   createdAt: number; // timestamp for sort order
   userId: string;
 }

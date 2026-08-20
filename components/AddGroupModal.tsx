@@ -16,6 +16,7 @@ export default function AddGroupModal({ onClose, onAdded }: Props) {
   const [name, setName] = useState("");
   const [program, setProgram] = useState<Program>("Start");
   const [startDate, setStartDate] = useState("");
+  const [coachName, setCoachName] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -29,6 +30,7 @@ export default function AddGroupModal({ onClose, onAdded }: Props) {
         name: name.trim(),
         program,
         startDate,
+        coachName: coachName.trim(),
         createdAt: Date.now(),
         userId: user.uid,
       });
@@ -69,6 +71,17 @@ export default function AddGroupModal({ onClose, onAdded }: Props) {
               placeholder="הכנס שם קבוצה..."
               className="border border-gray-200 rounded-xl px-4 py-3 text-gray-800 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent transition placeholder:text-gray-300"
               required
+            />
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <label className="text-sm font-medium text-gray-600">מאמן</label>
+            <input
+              type="text"
+              value={coachName}
+              onChange={(e) => setCoachName(e.target.value)}
+              placeholder="שם המאמן..."
+              className="border border-gray-200 rounded-xl px-4 py-3 text-gray-800 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent transition placeholder:text-gray-300"
             />
           </div>
 

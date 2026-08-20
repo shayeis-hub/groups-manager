@@ -1,9 +1,39 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    // Mirror lib/dietitians.ts DIETITIANS emails exactly — this is the real
+    // enforcement, the client-side list is only a UI-routing convenience.
+    function isDietitian() {
+      return request.auth != null && request.auth.token.email in [];
+    }
+
     match /groups/{groupId} {
-      allow read, write: if request.auth != null && request.auth.uid == resource.data.userId;
+      allow read: if request.auth != null && (request.auth.uid == resource.data.userId || isDietitian());
       allow create: if request.auth != null && request.auth.uid == request.resource.data.userId;
+      allow update, delete: if request.auth != null && request.auth.uid == resource.data.userId;
+    }
+
+    match /plans/{planId} {
+      allow read, delete: if request.auth != null && request.auth.uid == resource.data.userId;
+      allow create: if request.auth != null && request.auth.uid == request.resource.data.userId;
+      allow update: if request.auth != null && request.auth.uid == resource.data.userId;
+    }
+
+    match /clients/{clientId} {
+      allow read: if request.auth != null && (request.auth.uid == resource.data.userId || isDietitian());
+      allow create: if request.auth != null && request.auth.uid == request.resource.data.userId;
+      allow update, delete: if request.auth != null && request.auth.uid == resource.data.userId;
+
+      match /dietitianSessions/{sessionId} {
+        allow read: if request.auth != null && (request.auth.uid == get(/databases/$(database)/documents/clients/$(clientId)).data.userId || isDietitian());
+        allow create: if request.auth != null && (request.auth.uid == get(/databases/$(database)/documents/clients/$(clientId)).data.userId || isDietitian());
+        allow update, delete: if request.auth != null && request.auth.uid == get(/databases/$(database)/documents/clients/$(clientId)).data.userId;
+      }
+
+      match /coachSessions/{sessionId} {
+        allow read: if request.auth != null && (request.auth.uid == get(/databases/$(database)/documents/clients/$(clientId)).data.userId || isDietitian());
+        allow write: if request.auth != null && request.auth.uid == get(/databases/$(database)/documents/clients/$(clientId)).data.userId;
+      }
     }
   }
 }

@@ -8,11 +8,13 @@ import { db } from "@/lib/firebase";
 import { useAuth } from "@/context/AuthContext";
 import { Group, getCurrentWeek, PROGRAM_WEEKS } from "@/lib/groups";
 import { Client } from "@/lib/clients";
+import { isDietitianEmail } from "@/lib/dietitians";
 
 export default function GroupClientsPage() {
   const params = useParams<{ id: string }>();
   const groupId = params.id;
   const { user, loading } = useAuth();
+  const isDietitian = isDietitianEmail(user?.email);
   const [group, setGroup] = useState<Group | null>(null);
   const [clients, setClients] = useState<Client[]>([]);
   const [fetching, setFetching] = useState(true);
@@ -25,13 +27,13 @@ export default function GroupClientsPage() {
         const gSnap = await getDoc(doc(db, "groups", groupId));
         setGroup(gSnap.exists() ? ({ id: gSnap.id, ...gSnap.data() } as Group) : null);
 
-        const snap = await getDocs(
-          query(
-            collection(db, "clients"),
-            where("groupId", "==", groupId),
-            where("userId", "==", user.uid)
-          )
-        );
+        // A dietitian doesn't own this data (it belongs to whichever coach
+        // owns it), so the query can't filter by userId — the security rules
+        // grant dietitians read access regardless of who created the doc.
+        const clientsQuery = isDietitian
+          ? query(collection(db, "clients"), where("groupId", "==", groupId))
+          : query(collection(db, "clients"), where("groupId", "==", groupId), where("userId", "==", user.uid));
+        const snap = await getDocs(clientsQuery);
         setClients(
           snap.docs
             .map((d) => ({ id: d.id, ...d.data() } as Client))
@@ -44,7 +46,7 @@ export default function GroupClientsPage() {
       }
     };
     fetchAll();
-  }, [user, groupId]);
+  }, [user, groupId, isDietitian]);
 
   if (loading || (user && fetching)) {
     return (
@@ -84,6 +86,7 @@ export default function GroupClientsPage() {
           <div className="min-w-0">
             <h1 className="text-xl sm:text-2xl font-black text-gray-800 break-words">{group.name}</h1>
             <p className="text-sm text-gray-400">
+              {group.coachName ? `${group.coachName} · ` : ""}
               {group.program} · {week ? `שבוע ${week} מתוך ${total}` : "התוכנית הסתיימה"}
             </p>
           </div>
