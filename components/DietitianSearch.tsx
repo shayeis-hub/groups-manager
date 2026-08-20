@@ -99,7 +99,7 @@ export default function DietitianSearch() {
     <div className="min-h-screen bg-gray-50" dir="rtl">
       <header className="bg-white border-b border-gray-100 sticky top-0 z-10">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between gap-3">
-          <h1 className="text-xl sm:text-2xl font-black text-gray-800">ממשק תזונאית</h1>
+          <h1 className="text-xl sm:text-2xl font-black text-gray-800">ממשק תזונאית - מערכת ליווי לקוחות</h1>
           <div className="flex items-center gap-4">
             <span className="text-sm text-gray-400 hidden sm:block">{user?.displayName}</span>
             <button onClick={signOut} className="text-sm text-gray-400 hover:text-gray-600 transition">
@@ -132,15 +132,18 @@ export default function DietitianSearch() {
               const colors = PROGRAM_COLORS[group.program];
               const isOpen = isSearching || openIds.has(group.id);
               return (
-              <div key={group.id} className={`bg-white rounded-2xl shadow-sm border-2 ${colors.border} overflow-hidden`}>
+              <div key={group.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow overflow-hidden">
                 <button
                   onClick={() => toggleOpen(group.id)}
-                  className="w-full flex items-center justify-between gap-3 px-5 sm:px-6 py-4 flex-wrap hover:bg-gray-50 transition-colors"
+                  className="w-full flex items-center justify-between gap-3 px-5 sm:px-8 py-4 sm:py-5 flex-wrap hover:bg-gray-50 transition-colors"
                   dir="rtl"
                 >
                   <div className="flex items-center gap-3 flex-wrap">
-                    <span className={`text-xl sm:text-2xl font-bold ${colors.text}`}>
-                      {group.program} · {group.name}
+                    <span className={`text-sm font-semibold px-2.5 py-1 rounded-lg border shrink-0 ${colors.bg} ${colors.text} ${colors.border}`}>
+                      {group.program}
+                    </span>
+                    <span className="text-xl sm:text-2xl font-bold text-gray-800 min-w-0 break-words">
+                      {group.name}
                     </span>
                     <span className="text-sm font-medium text-gray-400 shrink-0 whitespace-nowrap">
                       {group.coachName || "ללא מאמן משויך"}
@@ -155,7 +158,7 @@ export default function DietitianSearch() {
                 </button>
 
                 {isOpen && (
-                  <div className="flex flex-wrap gap-2 px-5 sm:px-6 pb-4">
+                  <div className="flex flex-wrap gap-2 px-5 sm:px-8 pb-4 sm:pb-5">
                     {clients.map((c) => (
                       <Link
                         key={c.id}
