@@ -10,7 +10,7 @@ import { db } from "@/lib/firebase";
 import { useAuth } from "@/context/AuthContext";
 import { Group, getCurrentWeek, PROGRAM_WEEKS } from "@/lib/groups";
 import { Client, Session, SessionKind, SESSION_LABELS } from "@/lib/clients";
-import { isDietitianEmail } from "@/lib/dietitians";
+import { isDietitianEmail, dietitianNameByEmail } from "@/lib/dietitians";
 
 const KINDS: SessionKind[] = ["dietitianSessions", "coachSessions"];
 
@@ -82,10 +82,12 @@ export default function ClientPage() {
     if (!composing || !draftText.trim()) return;
     setSaving(true);
     try {
+      const authorName = dietitianNameByEmail(user?.email) ?? user?.displayName ?? null;
       const ref = await addDoc(collection(db, "clients", clientId, composing), {
         date: draftDate,
         text: draftText.trim(),
         createdAt: Date.now(),
+        ...(authorName ? { authorName } : {}),
       });
       setComposing(null);
       setExpandedId(ref.id);
@@ -261,7 +263,7 @@ export default function ClientPage() {
                         className="w-full flex items-center justify-between gap-3 px-4 py-3 hover:bg-gray-50 transition-colors text-right"
                       >
                         <span className="text-sm font-medium text-gray-700">
-                          שיחה מספר {number}
+                          שיחה מספר {number}{s.authorName ? ` · ${s.authorName}` : ""}
                         </span>
                         <div className="flex items-center gap-2 shrink-0">
                           <span className="text-xs text-gray-400">{s.date}</span>

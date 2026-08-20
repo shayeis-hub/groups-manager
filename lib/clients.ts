@@ -12,6 +12,7 @@ export interface Session {
   date: string; // YYYY-MM-DD
   text: string;
   createdAt: number;
+  authorName?: string; // who logged it — matters when multiple dietitians share a client
 }
 
 export type SessionKind = "dietitianSessions" | "coachSessions";

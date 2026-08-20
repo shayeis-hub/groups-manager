@@ -19,3 +19,11 @@ export function isDietitianEmail(email: string | null | undefined): boolean {
   if (!email) return false;
   return DIETITIANS.some((d) => d.email.toLowerCase() === email.toLowerCase());
 }
+
+// Short Hebrew name for a dietitian by email — used to label who logged a
+// session (e.g. "רותם" instead of a full Google display name).
+export function dietitianNameByEmail(email: string | null | undefined): string | null {
+  if (!email) return null;
+  const match = DIETITIANS.find((d) => d.email.toLowerCase() === email.toLowerCase());
+  return match ? match.name : null;
+}
