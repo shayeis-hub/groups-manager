@@ -10,7 +10,7 @@ export interface Dietitian {
 }
 
 export const DIETITIANS: Dietitian[] = [
-  { name: "בדיקה", email: "shayeis@gmail.com" }, // TEMP for verification, will be removed
+  { name: "בדיקה", email: "shay@leptin4life.com" }, // TEMP for verification, will be removed
 ];
 
 export function isDietitianEmail(email: string | null | undefined): boolean {

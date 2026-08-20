@@ -16,7 +16,9 @@ export default function AddGroupModal({ onClose, onAdded }: Props) {
   const [name, setName] = useState("");
   const [program, setProgram] = useState<Program>("Start");
   const [startDate, setStartDate] = useState("");
-  const [coachName, setCoachName] = useState("");
+  // Defaults to whoever's creating the group — most groups are the logged-in
+  // coach's own cohort; still editable for groups run by someone else.
+  const [coachName, setCoachName] = useState(user?.displayName ?? "");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
