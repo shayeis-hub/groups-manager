@@ -138,11 +138,11 @@ export default function DietitianSearch() {
                   className="w-full flex items-center justify-between gap-3 px-5 py-4 sm:px-8 sm:py-5"
                 >
                   <div className="min-w-0 text-right">
-                    <div className="text-xl sm:text-2xl font-bold text-gray-800 break-words">
-                      {group.name}
+                    <div className={`text-xl sm:text-2xl font-bold break-words ${colors.text}`}>
+                      {group.program} · {group.name}
                     </div>
                     <div className="text-sm text-gray-400 mt-0.5">
-                      {group.program} · {group.coachName || "ללא מאמן משויך"}
+                      {group.coachName || "ללא מאמן משויך"}
                     </div>
                   </div>
 
