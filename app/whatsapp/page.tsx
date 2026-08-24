@@ -191,6 +191,13 @@ export default function WhatsappManagementPage() {
       <main className="max-w-3xl mx-auto px-4 sm:px-6 py-6 sm:py-8 flex flex-col gap-6">
         <WhatsappConnectCard session={session} onConnect={() => requestWhatsappConnection(user.uid)} />
 
+        <Link
+          href="/whatsapp/templates"
+          className="block text-center bg-white border border-gray-200 hover:border-indigo-300 hover:bg-indigo-50 text-gray-700 hover:text-indigo-700 font-semibold px-6 py-3 rounded-xl transition shadow-sm"
+        >
+          ספריית הודעות
+        </Link>
+
         {session?.status === "connected" && (
           <>
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 px-5 py-4 sm:px-8 sm:py-5 flex flex-col gap-3" dir="rtl">

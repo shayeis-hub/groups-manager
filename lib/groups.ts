@@ -90,3 +90,13 @@ export function isGroupUpcoming(startDate: string): boolean {
 export function canAssignClients(startDate: string, program: Program): boolean {
   return isGroupActive(startDate, program) || isGroupUpcoming(startDate);
 }
+
+// Inverse of getWeekForDate: the calendar date for a given program-week +
+// weekday (0=Sunday..6=Saturday), relative to a group's start date. Used to
+// schedule a whole template library against one group's actual calendar.
+export function getDateForWeek(startDate: string, week: number, dayOfWeek: number): Date {
+  const week1Sunday = getSunday(new Date(startDate + "T00:00:00"));
+  const d = new Date(week1Sunday);
+  d.setDate(d.getDate() + (week - 1) * 7 + dayOfWeek);
+  return d;
+}
