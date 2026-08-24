@@ -5,7 +5,7 @@ import Link from "next/link";
 import { collection, onSnapshot, query, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/context/AuthContext";
-import { Group } from "@/lib/groups";
+import { Group, getDateForWeek } from "@/lib/groups";
 import {
   MessageTemplate,
   TemplateSet,
@@ -76,10 +76,19 @@ export default function TemplatesPage() {
 
   const runApply = async () => {
     if (!applyGroup || matchingTemplates.length === 0) return;
-    const total = matchingTemplates.length * (applyGroup.whatsappGroups?.length ?? 0);
+    const now = new Date();
+    const upcomingCount = matchingTemplates.filter((t) => {
+      const d = getDateForWeek(applyGroup.startDate, t.weekOffset, t.dayOfWeek);
+      const [h, m] = applyTime.split(":").map(Number);
+      d.setHours(h, m, 0, 0);
+      return d > now;
+    }).length;
+    const skippedCount = matchingTemplates.length - upcomingCount;
+    const total = upcomingCount * (applyGroup.whatsappGroups?.length ?? 0);
+    const skipNote = skippedCount > 0 ? ` (${skippedCount} הודעות ידלגו כי התאריך שלהן כבר עבר)` : "";
     if (
       !confirm(
-        `לתזמן ${matchingTemplates.length} הודעות (${total} בפועל אם יש כמה קבוצות וואטסאפ מקושרות) לקבוצה "${applyGroup.name}", לפי תאריך ההתחלה שלה?`
+        `לתזמן ${upcomingCount} הודעות${skipNote} (${total} בפועל אם יש כמה קבוצות וואטסאפ מקושרות) לקבוצה "${applyGroup.name}", לפי תאריך ההתחלה שלה?`
       )
     ) {
       return;
@@ -87,8 +96,12 @@ export default function TemplatesPage() {
     setApplying(true);
     setApplyFeedback("");
     try {
-      await applyTemplatesToGroup(applyGroup, matchingTemplates, applyTime);
-      setApplyFeedback(`תוזמנו ${matchingTemplates.length} הודעות.`);
+      const { scheduled, skipped } = await applyTemplatesToGroup(applyGroup, matchingTemplates, applyTime);
+      setApplyFeedback(
+        skipped > 0
+          ? `תוזמנו ${scheduled} הודעות. ${skipped} הודעות דולגו כי התאריך שלהן כבר עבר.`
+          : `תוזמנו ${scheduled} הודעות.`
+      );
     } catch (err) {
       setApplyFeedback(err instanceof Error ? err.message : "שגיאה, נסה שוב");
     } finally {

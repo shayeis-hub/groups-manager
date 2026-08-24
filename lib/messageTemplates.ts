@@ -68,16 +68,29 @@ export async function deleteMessageTemplate(id: string) {
 // Schedules one 'send' command per (matching template × linked WhatsApp
 // group) — reuses the same queue the composer uses, so the results show up
 // in ScheduledMessagesPanel like any other scheduled message.
+//
+// Templates whose computed date already passed are skipped rather than
+// queued: a command with a past scheduledFor is picked up as immediately
+// due by the bridge's sweep, so applying a set to a group that's already a
+// few weeks in would otherwise blast out every "missed" week's messages at
+// once instead of just the ones still ahead.
 export async function applyTemplatesToGroup(
   group: Group,
   templates: MessageTemplate[],
   timeOfDay: string // "HH:MM"
-) {
+): Promise<{ scheduled: number; skipped: number }> {
   const [hours, minutes] = timeOfDay.split(":").map(Number);
   const links = group.whatsappGroups ?? [];
+  const now = new Date();
+
+  const upcoming = templates.filter((t) => {
+    const scheduledFor = getDateForWeek(group.startDate, t.weekOffset, t.dayOfWeek);
+    scheduledFor.setHours(hours, minutes, 0, 0);
+    return scheduledFor > now;
+  });
 
   await Promise.all(
-    templates.flatMap((t) => {
+    upcoming.flatMap((t) => {
       const scheduledFor = getDateForWeek(group.startDate, t.weekOffset, t.dayOfWeek);
       scheduledFor.setHours(hours, minutes, 0, 0);
       return links.map((link) =>
@@ -93,4 +106,6 @@ export async function applyTemplatesToGroup(
       );
     })
   );
+
+  return { scheduled: upcoming.length, skipped: templates.length - upcoming.length };
 }
