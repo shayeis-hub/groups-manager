@@ -5,10 +5,27 @@ import { WhatsappAttachment, queueWhatsappCommand } from "@/lib/whatsapp";
 
 export const WEEKDAY_LABELS = ["ראשון", "שני", "שלישי", "רביעי", "חמישי", "שישי", "שבת"];
 
+// A named, reusable batch of templates for one program — e.g. "קיץ - Start"
+// vs "חורף - Start". Kept as its own collection (not a free-text tag on each
+// template) so renaming/reusing it can't silently fragment into near-
+// duplicate spellings.
+export interface TemplateSet {
+  id: string;
+  uid: string;
+  name: string;
+  program: Program;
+  createdAt: number;
+}
+
+export async function createTemplateSet(uid: string, name: string, program: Program): Promise<string> {
+  const ref = await addDoc(collection(db, "templateSets"), { uid, name: name.trim(), program, createdAt: Date.now() });
+  return ref.id;
+}
+
 export interface MessageTemplate {
   id: string;
   uid: string;
-  program: Program;
+  setId: string;
   name: string;
   weekOffset: number; // 1-based program week
   dayOfWeek: number; // 0=Sunday..6=Saturday
@@ -19,7 +36,7 @@ export interface MessageTemplate {
 
 interface SaveTemplateInput {
   uid: string;
-  program: Program;
+  setId: string;
   name: string;
   weekOffset: number;
   dayOfWeek: number;

@@ -43,6 +43,13 @@ service cloud.firestore {
       allow create: if request.auth != null && request.auth.uid == request.resource.data.uid;
     }
 
+    // Named batches of templates (e.g. "קיץ - Start" vs "חורף - Start") that
+    // messageTemplates docs reference by setId.
+    match /templateSets/{setId} {
+      allow read, update, delete: if request.auth != null && request.auth.uid == resource.data.uid;
+      allow create: if request.auth != null && request.auth.uid == request.resource.data.uid;
+    }
+
     match /plans/{planId} {
       allow read, delete: if request.auth != null && request.auth.uid == resource.data.userId;
       allow create: if request.auth != null && request.auth.uid == request.resource.data.userId;
