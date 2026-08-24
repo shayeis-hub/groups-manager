@@ -84,10 +84,11 @@ export default function WhatsappManagementPage() {
 
   const selectedGroup = groups.find((g) => g.id === selectedGroupId);
 
-  // Most-advanced cycle first, so the groups closest to needing a message
-  // (or about to wrap up) are easy to find without scrolling.
+  // Newest cycle (lowest current week) first; inactive groups (no current
+  // week) sort last.
   const composerGroups = [...groups].sort(
-    (a, b) => (getCurrentWeek(b.startDate, b.program) ?? -1) - (getCurrentWeek(a.startDate, a.program) ?? -1)
+    (a, b) =>
+      (getCurrentWeek(a.startDate, a.program) ?? Infinity) - (getCurrentWeek(b.startDate, b.program) ?? Infinity)
   );
 
   const sendMessage = async () => {
