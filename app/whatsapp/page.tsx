@@ -84,6 +84,12 @@ export default function WhatsappManagementPage() {
 
   const selectedGroup = groups.find((g) => g.id === selectedGroupId);
 
+  // Most-advanced cycle first, so the groups closest to needing a message
+  // (or about to wrap up) are easy to find without scrolling.
+  const composerGroups = [...groups].sort(
+    (a, b) => (getCurrentWeek(b.startDate, b.program) ?? -1) - (getCurrentWeek(a.startDate, a.program) ?? -1)
+  );
+
   const sendMessage = async () => {
     if (!user || !selectedGroup || !text.trim()) return;
     setSending(true);
@@ -222,7 +228,7 @@ export default function WhatsappManagementPage() {
                       className="border border-gray-200 rounded-xl px-4 py-3 text-gray-800 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent transition"
                     >
                       <option value="">בחר קבוצה...</option>
-                      {groups.map((g) => {
+                      {composerGroups.map((g) => {
                         const week = getCurrentWeek(g.startDate, g.program);
                         const total = PROGRAM_WEEKS[g.program];
                         return (

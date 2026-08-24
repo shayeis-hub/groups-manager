@@ -227,13 +227,15 @@ export default function Home() {
             {showEnded && (
               <div className="flex flex-col gap-3 px-3 sm:px-4 pb-4 pt-1">
                 {endedGroups.map((g) => (
-                  <GroupCard
-                    key={g.id}
-                    group={g}
-                    clientCount={clientCounts[g.id] ?? 0}
-                    onDeleted={fetchGroups}
-                    onUpdated={fetchGroups}
-                  />
+                  <div key={g.id} className="flex flex-col gap-1">
+                    <span className={`text-xs font-bold px-1 ${PROGRAM_COLORS[g.program]}`}>{g.program}</span>
+                    <GroupCard
+                      group={g}
+                      clientCount={clientCounts[g.id] ?? 0}
+                      onDeleted={fetchGroups}
+                      onUpdated={fetchGroups}
+                    />
+                  </div>
                 ))}
               </div>
             )}
