@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { collection, onSnapshot, query, where } from "firebase/firestore";
+import { collection, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/context/AuthContext";
 import { PROGRAMS, Program } from "@/lib/groups";
@@ -40,10 +40,10 @@ export default function TemplateForm({ editing, defaultSetId, onDone, onCancel }
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
+  // Shared across every coach — not scoped by uid, on purpose.
   useEffect(() => {
     if (!user) return;
-    const q = query(collection(db, "templateSets"), where("uid", "==", user.uid));
-    return onSnapshot(q, (snap) => {
+    return onSnapshot(collection(db, "templateSets"), (snap) => {
       setSets(
         snap.docs
           .map((d) => ({ id: d.id, ...d.data() } as TemplateSet))
