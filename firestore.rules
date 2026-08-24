@@ -13,6 +13,18 @@ service cloud.firestore {
       allow update, delete: if request.auth != null && request.auth.uid == resource.data.userId;
     }
 
+    // Written by the app, consumed by the local WhatsApp bridge service
+    // (which uses the Admin SDK and so bypasses these rules entirely).
+    // Clients may only create+read their own commands, never edit/delete —
+    // status transitions belong solely to the bridge service.
+    match /whatsappCommands/{commandId} {
+      allow read: if request.auth != null && (request.auth.uid == resource.data.createdBy || isDietitian());
+      allow create: if request.auth != null
+        && request.auth.uid == request.resource.data.createdBy
+        && request.resource.data.status == 'pending';
+      allow update, delete: if false;
+    }
+
     match /plans/{planId} {
       allow read, delete: if request.auth != null && request.auth.uid == resource.data.userId;
       allow create: if request.auth != null && request.auth.uid == request.resource.data.userId;

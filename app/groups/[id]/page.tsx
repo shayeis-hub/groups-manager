@@ -9,6 +9,7 @@ import { useAuth } from "@/context/AuthContext";
 import { Group, getCurrentWeek, PROGRAM_WEEKS } from "@/lib/groups";
 import { Client } from "@/lib/clients";
 import { isDietitianEmail } from "@/lib/dietitians";
+import WhatsappPanel from "@/components/WhatsappPanel";
 
 export default function GroupClientsPage() {
   const params = useParams<{ id: string }>();
@@ -94,6 +95,10 @@ export default function GroupClientsPage() {
       </header>
 
       <main className="max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+        <div className="mb-6">
+          <WhatsappPanel group={group} />
+        </div>
+
         <p className="text-gray-400 text-sm mb-4 sm:mb-6">
           {clients.length} לקוחות ליווי
         </p>

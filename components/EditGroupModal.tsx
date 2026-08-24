@@ -15,6 +15,7 @@ export default function EditGroupModal({ group, onClose, onSaved }: Props) {
   const [name, setName] = useState(group.name);
   const [startDate, setStartDate] = useState(group.startDate);
   const [coachName, setCoachName] = useState(group.coachName ?? "");
+  const [whatsappGroupId, setWhatsappGroupId] = useState(group.whatsappGroupId ?? "");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -28,6 +29,7 @@ export default function EditGroupModal({ group, onClose, onSaved }: Props) {
         name: name.trim(),
         startDate,
         coachName: coachName.trim(),
+        whatsappGroupId: whatsappGroupId.trim(),
       });
       onSaved();
       onClose();
@@ -74,6 +76,18 @@ export default function EditGroupModal({ group, onClose, onSaved }: Props) {
               onChange={(e) => setStartDate(e.target.value)}
               className="border border-gray-200 rounded-xl px-4 py-3 text-gray-800 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent transition"
               required
+            />
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <label className="text-sm font-medium text-gray-600">מזהה קבוצת וואטסאפ</label>
+            <input
+              type="text"
+              value={whatsappGroupId}
+              onChange={(e) => setWhatsappGroupId(e.target.value)}
+              placeholder="לדוגמה: 120363...@g.us"
+              dir="ltr"
+              className="border border-gray-200 rounded-xl px-4 py-3 text-gray-800 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent transition placeholder:text-gray-300 text-left"
             />
           </div>
 

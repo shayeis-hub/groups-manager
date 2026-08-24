@@ -30,6 +30,7 @@ export interface Group {
   coachName?: string; // free text — groups created before this field don't have one yet
   createdAt: number; // timestamp for sort order
   userId: string;
+  whatsappGroupId?: string; // WhatsApp group JID, e.g. "120363...@g.us"
 }
 
 // Returns the Sunday at or before the given date
