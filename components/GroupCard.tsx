@@ -83,9 +83,15 @@ export default function GroupCard({ group, clientCount, onDeleted, onUpdated }: 
             </div>
 
             <div className="text-left min-w-[52px]">
-              <span className={`text-3xl sm:text-4xl font-black ${colors.text}`}>{week}</span>
-              <span className="text-sm text-gray-400 mr-1">/ {total}</span>
-              <div className="text-xs text-gray-400 text-center">שבוע</div>
+              {week ? (
+                <>
+                  <span className={`text-3xl sm:text-4xl font-black ${colors.text}`}>{week}</span>
+                  <span className="text-sm text-gray-400 mr-1">/ {total}</span>
+                  <div className="text-xs text-gray-400 text-center">שבוע</div>
+                </>
+              ) : (
+                <span className="text-sm text-gray-400">הסתיים</span>
+              )}
             </div>
 
             <div className="hidden sm:block">{deleteButton}</div>

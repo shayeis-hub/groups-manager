@@ -5,11 +5,12 @@ import Link from "next/link";
 import { collection, query, where, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/context/AuthContext";
-import { Group, isGroupActive, canAssignClients, getCurrentWeek, PROGRAMS, Program } from "@/lib/groups";
+import { Group, isGroupActive, isGroupUpcoming, canAssignClients, getCurrentWeek, PROGRAMS, Program } from "@/lib/groups";
 import { isDietitianEmail } from "@/lib/dietitians";
 import AddGroupModal from "@/components/AddGroupModal";
 import AddClientModal from "@/components/AddClientModal";
 import ProgramSection from "@/components/ProgramSection";
+import GroupCard from "@/components/GroupCard";
 import DietitianSearch from "@/components/DietitianSearch";
 
 const PROGRAM_COLORS: Record<Program, string> = {
@@ -26,11 +27,13 @@ export default function Home() {
   const { user, loading, signIn, signOut } = useAuth();
   const isDietitian = isDietitianEmail(user?.email);
   const [groups, setGroups] = useState<Group[]>([]);
+  const [endedGroups, setEndedGroups] = useState<Group[]>([]);
   const [assignableGroups, setAssignableGroups] = useState<Group[]>([]);
   const [clientCounts, setClientCounts] = useState<Record<string, number>>({});
   const [fetching, setFetching] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [showClientModal, setShowClientModal] = useState(false);
+  const [showEnded, setShowEnded] = useState(false);
 
   const fetchGroups = async () => {
     if (!user || isDietitian) return;
@@ -45,6 +48,11 @@ export default function Home() {
         .map((d) => ({ id: d.id, ...d.data() } as Group))
         .sort((a, b) => (getCurrentWeek(a.startDate, a.program) ?? 0) - (getCurrentWeek(b.startDate, b.program) ?? 0));
       setGroups(all.filter((g) => isGroupActive(g.startDate, g.program)));
+      setEndedGroups(
+        all
+          .filter((g) => !isGroupActive(g.startDate, g.program) && !isGroupUpcoming(g.startDate))
+          .sort((a, b) => b.startDate.localeCompare(a.startDate)) // most recently ended first
+      );
 
       // Cards on this page show running cycles only, but a new client can also
       // be pre-assigned to a cycle that hasn't started yet (finished ones can't).
@@ -194,6 +202,41 @@ export default function Home() {
                 onUpdated={fetchGroups}
               />
             ))}
+          </div>
+        )}
+
+        {endedGroups.length > 0 && (
+          <div className="rounded-2xl border border-gray-100 overflow-hidden bg-white shadow-sm mt-3">
+            <button
+              onClick={() => setShowEnded((o) => !o)}
+              className="w-full flex items-center justify-between px-5 sm:px-6 py-4 hover:bg-gray-50 transition-colors"
+              dir="rtl"
+            >
+              <div className="flex items-center gap-3">
+                <span className="text-lg font-bold text-gray-500">מחזורים שהסתיימו</span>
+                <span className="text-sm text-gray-400">{endedGroups.length} קבוצות</span>
+              </div>
+              <svg
+                className={`w-5 h-5 text-gray-400 transition-transform duration-200 ${showEnded ? "rotate-180" : ""}`}
+                fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+
+            {showEnded && (
+              <div className="flex flex-col gap-3 px-3 sm:px-4 pb-4 pt-1">
+                {endedGroups.map((g) => (
+                  <GroupCard
+                    key={g.id}
+                    group={g}
+                    clientCount={clientCounts[g.id] ?? 0}
+                    onDeleted={fetchGroups}
+                    onUpdated={fetchGroups}
+                  />
+                ))}
+              </div>
+            )}
           </div>
         )}
       </main>
