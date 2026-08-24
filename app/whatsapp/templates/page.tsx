@@ -11,6 +11,7 @@ import {
   TemplateSet,
   WEEKDAY_LABELS,
   deleteMessageTemplate,
+  deleteTemplateSet,
   applyTemplatesToGroup,
 } from "@/lib/messageTemplates";
 import TemplateForm from "@/components/TemplateForm";
@@ -218,12 +219,27 @@ export default function TemplatesPage() {
                   <div key={s.id} className="flex flex-col gap-2">
                     <div className="flex items-center justify-between">
                       <h3 className="text-sm font-bold text-gray-600">{s.name} <span className="text-gray-400 font-normal">({s.program})</span></h3>
-                      <button
-                        onClick={() => setShowAddFor(showAddFor === s.id ? null : s.id)}
-                        className="text-xs font-semibold text-indigo-600 hover:underline"
-                      >
-                        {showAddFor === s.id ? "ביטול" : "+ הוסף הודעה"}
-                      </button>
+                      <div className="flex items-center gap-3">
+                        <button
+                          onClick={() => setShowAddFor(showAddFor === s.id ? null : s.id)}
+                          className="text-xs font-semibold text-indigo-600 hover:underline"
+                        >
+                          {showAddFor === s.id ? "ביטול" : "+ הוסף הודעה"}
+                        </button>
+                        <button
+                          onClick={async () => {
+                            if (!confirm(`למחוק את קבוצת השליחה "${s.name}"?`)) return;
+                            try {
+                              await deleteTemplateSet(s.id, setTemplates.length);
+                            } catch (err) {
+                              alert(err instanceof Error ? err.message : "שגיאה במחיקה");
+                            }
+                          }}
+                          className="text-xs font-semibold text-red-500 hover:underline"
+                        >
+                          מחק קבוצת שליחה
+                        </button>
+                      </div>
                     </div>
 
                     {showAddFor === s.id && (

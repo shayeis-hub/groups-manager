@@ -22,6 +22,15 @@ export async function createTemplateSet(uid: string, name: string, program: Prog
   return ref.id;
 }
 
+// Deletes the set only if nothing references it — a cascade delete of its
+// templates would be a much bigger surprise than a blocked click.
+export async function deleteTemplateSet(id: string, templateCount: number) {
+  if (templateCount > 0) {
+    throw new Error(`אי אפשר למחוק קבוצת שליחה עם ${templateCount} הודעות בה — מחק קודם את ההודעות`);
+  }
+  await deleteDoc(doc(db, "templateSets", id));
+}
+
 export interface MessageTemplate {
   id: string;
   uid: string;
