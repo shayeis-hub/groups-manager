@@ -1,0 +1,314 @@
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import { collection, doc, getDocs, onSnapshot, query, where } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import { useAuth } from "@/context/AuthContext";
+import { Group, getCurrentWeek, PROGRAM_WEEKS } from "@/lib/groups";
+import { WhatsappSession, requestWhatsappConnection, queueWhatsappCommand } from "@/lib/whatsapp";
+import WhatsappConnectCard from "@/components/WhatsappConnectCard";
+
+const OPEN_STATE_LABEL: Record<string, string> = {
+  open: "כל הקבוצות פתוחות לכתיבה",
+  closed: "כל הקבוצות סגורות (רק אדמינים)",
+  mixed: "חלק פתוחות, חלק סגורות",
+  none: "אין עדיין קבוצות מקושרות",
+};
+
+export default function WhatsappManagementPage() {
+  const { user, loading } = useAuth();
+  const [session, setSession] = useState<WhatsappSession | null>(null);
+  const [groups, setGroups] = useState<Group[]>([]);
+  const [fetchingGroups, setFetchingGroups] = useState(true);
+  const [selectedGroupId, setSelectedGroupId] = useState("");
+  const [text, setText] = useState("");
+  const [scheduledAt, setScheduledAt] = useState("");
+  const [sending, setSending] = useState(false);
+  const [feedback, setFeedback] = useState("");
+  const [bulkBusy, setBulkBusy] = useState<"open" | "close" | null>(null);
+  const [closeGroupId, setCloseGroupId] = useState("");
+  const [closeText, setCloseText] = useState("");
+  const [closing, setClosing] = useState(false);
+  const [closeFeedback, setCloseFeedback] = useState("");
+
+  useEffect(() => {
+    if (!user) return;
+    return onSnapshot(doc(db, "whatsappSessions", user.uid), (snap) => setSession(snap.data() ?? {}));
+  }, [user]);
+
+  const fetchGroups = async () => {
+    if (!user) return;
+    setFetchingGroups(true);
+    try {
+      const snap = await getDocs(query(collection(db, "groups"), where("userId", "==", user.uid)));
+      setGroups(
+        snap.docs
+          .map((d) => ({ id: d.id, ...d.data() } as Group))
+          .filter((g) => g.whatsappGroupId && !g.whatsappArchived)
+          .sort((a, b) => a.name.localeCompare(b.name, "he"))
+      );
+    } finally {
+      setFetchingGroups(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchGroups();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
+
+  const openState = useMemo(() => {
+    if (groups.length === 0) return "none";
+    const states = groups.map((g) => g.whatsappOpen);
+    if (states.every((s) => s === true)) return "open";
+    if (states.every((s) => s === false)) return "closed";
+    return "mixed";
+  }, [groups]);
+
+  const runBulk = async (type: "open" | "close") => {
+    if (!user || groups.length === 0) return;
+    setBulkBusy(type);
+    try {
+      await Promise.all(
+        groups.map((g) =>
+          queueWhatsappCommand({ uid: user.uid, waGroupId: g.whatsappGroupId!, appGroupId: g.id, type })
+        )
+      );
+    } finally {
+      setBulkBusy(null);
+    }
+  };
+
+  const selectedGroup = groups.find((g) => g.id === selectedGroupId);
+
+  const sendMessage = async () => {
+    if (!user || !selectedGroup || !text.trim()) return;
+    setSending(true);
+    setFeedback("");
+    try {
+      await queueWhatsappCommand({
+        uid: user.uid,
+        waGroupId: selectedGroup.whatsappGroupId!,
+        appGroupId: selectedGroup.id,
+        type: "send",
+        text: text.trim(),
+        scheduledFor: scheduledAt ? new Date(scheduledAt) : undefined,
+      });
+      setFeedback(scheduledAt ? "ההודעה תוזמנה." : "ההודעה נשלחה לתור.");
+      setText("");
+      setScheduledAt("");
+      setSelectedGroupId("");
+    } catch (err) {
+      setFeedback(err instanceof Error ? err.message : "שגיאה בשליחה, נסה שוב");
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const closeTargetGroup = groups.find((g) => g.id === closeGroupId);
+
+  const runCloseGroup = async () => {
+    if (!user || !closeTargetGroup) return;
+    const sendStep = closeText.trim() ? "לשלוח את הודעת הסגירה, " : "";
+    if (
+      !confirm(
+        `לנעול את "${closeTargetGroup.name}" לכתיבת אדמינים בלבד, ${sendStep}ולהעביר את הקבוצה לארכיון?\n\nזו פעולה שאי אפשר לבטל אוטומטית מתוך האפליקציה.`
+      )
+    ) {
+      return;
+    }
+    setClosing(true);
+    setCloseFeedback("");
+    try {
+      await queueWhatsappCommand({
+        uid: user.uid,
+        waGroupId: closeTargetGroup.whatsappGroupId!,
+        appGroupId: closeTargetGroup.id,
+        type: "closeGroup",
+        text: closeText.trim() || undefined,
+      });
+      setCloseFeedback("נוהל הסגירה נשלח לביצוע.");
+      setCloseText("");
+      setCloseGroupId("");
+    } catch (err) {
+      setCloseFeedback(err instanceof Error ? err.message : "שגיאה, נסה שוב");
+    } finally {
+      setClosing(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50" dir="rtl">
+        <Link href="/" className="text-indigo-600 font-semibold">יש להתחבר תחילה</Link>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50" dir="rtl">
+      <header className="bg-white border-b border-gray-100 sticky top-0 z-10">
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 py-4 flex items-center gap-3">
+          <Link href="/" className="text-gray-300 hover:text-gray-600 transition text-2xl leading-none shrink-0">
+            ›
+          </Link>
+          <h1 className="text-xl sm:text-2xl font-black text-gray-800">ניהול וואטסאפ</h1>
+        </div>
+      </header>
+
+      <main className="max-w-3xl mx-auto px-4 sm:px-6 py-6 sm:py-8 flex flex-col gap-6">
+        <WhatsappConnectCard session={session} onConnect={() => requestWhatsappConnection(user.uid)} />
+
+        {session?.status === "connected" && (
+          <>
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 px-5 py-4 sm:px-8 sm:py-5 flex flex-col gap-3" dir="rtl">
+              <h2 className="text-lg font-bold text-gray-800">כל הקבוצות</h2>
+              <p className="text-sm text-gray-400">{OPEN_STATE_LABEL[openState]}</p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => runBulk("open")}
+                  disabled={bulkBusy !== null || groups.length === 0}
+                  className="flex-1 bg-green-50 hover:bg-green-100 text-green-700 font-semibold rounded-xl py-2.5 text-sm transition disabled:opacity-50"
+                >
+                  {bulkBusy === "open" ? "פותח..." : "פתח את כל הקבוצות"}
+                </button>
+                <button
+                  onClick={() => runBulk("close")}
+                  disabled={bulkBusy !== null || groups.length === 0}
+                  className="flex-1 bg-red-50 hover:bg-red-100 text-red-700 font-semibold rounded-xl py-2.5 text-sm transition disabled:opacity-50"
+                >
+                  {bulkBusy === "close" ? "סוגר..." : "סגור את כל הקבוצות"}
+                </button>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 px-5 py-4 sm:px-8 sm:py-5 flex flex-col gap-4" dir="rtl">
+              <h2 className="text-lg font-bold text-gray-800">שליחת הודעה</h2>
+
+              {fetchingGroups ? (
+                <p className="text-sm text-gray-400">טוען קבוצות...</p>
+              ) : groups.length === 0 ? (
+                <p className="text-sm text-gray-400">
+                  אין עדיין קבוצות מקושרות לוואטסאפ. ניתן לקשר קבוצה דרך עריכת קבוצה בעמוד הראשי.
+                </p>
+              ) : (
+                <>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-sm font-medium text-gray-600">קבוצה</label>
+                    <select
+                      value={selectedGroupId}
+                      onChange={(e) => setSelectedGroupId(e.target.value)}
+                      className="border border-gray-200 rounded-xl px-4 py-3 text-gray-800 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent transition"
+                    >
+                      <option value="">בחר קבוצה...</option>
+                      {groups.map((g) => {
+                        const week = getCurrentWeek(g.startDate, g.program);
+                        const total = PROGRAM_WEEKS[g.program];
+                        return (
+                          <option key={g.id} value={g.id}>
+                            {g.program} · {g.name} · {week ? `שבוע ${week}/${total}` : "לא פעיל"}
+                          </option>
+                        );
+                      })}
+                    </select>
+                  </div>
+
+                  <textarea
+                    value={text}
+                    onChange={(e) => setText(e.target.value)}
+                    placeholder="טקסט ההודעה..."
+                    rows={4}
+                    className="border border-gray-200 rounded-xl px-4 py-3 text-gray-800 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent transition placeholder:text-gray-300 resize-none"
+                  />
+
+                  <div className="flex flex-wrap items-center gap-3">
+                    <label className="text-sm text-gray-500 flex items-center gap-2">
+                      תזמון (אופציונלי):
+                      <input
+                        type="datetime-local"
+                        value={scheduledAt}
+                        onChange={(e) => setScheduledAt(e.target.value)}
+                        className="border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-gray-700 bg-gray-50"
+                      />
+                    </label>
+                    <button
+                      onClick={sendMessage}
+                      disabled={sending || !selectedGroupId || !text.trim()}
+                      className="mr-auto bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl px-5 py-2 text-sm transition disabled:opacity-50"
+                    >
+                      {sending ? "שולח..." : scheduledAt ? "תזמן שליחה" : "שלח עכשיו"}
+                    </button>
+                  </div>
+
+                  {feedback && <p className="text-sm text-gray-500">{feedback}</p>}
+                </>
+              )}
+            </div>
+
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 px-5 py-4 sm:px-8 sm:py-5 flex flex-col gap-4" dir="rtl">
+              <div>
+                <h2 className="text-lg font-bold text-gray-800">סגירת קבוצה</h2>
+                <p className="text-sm text-gray-400 mt-1">
+                  נוהל סיום מחזור: נועל את הקבוצה לכתיבת אדמינים בלבד ומעביר לארכיון (עם הודעת סגירה אופציונלית).
+                </p>
+              </div>
+
+              {groups.length === 0 ? (
+                <p className="text-sm text-gray-400">אין קבוצות פעילות מקושרות לסגור.</p>
+              ) : (
+                <>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-sm font-medium text-gray-600">קבוצה לסגירה</label>
+                    <select
+                      value={closeGroupId}
+                      onChange={(e) => setCloseGroupId(e.target.value)}
+                      className="border border-gray-200 rounded-xl px-4 py-3 text-gray-800 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent transition"
+                    >
+                      <option value="">בחר קבוצה...</option>
+                      {groups.map((g) => {
+                        const week = getCurrentWeek(g.startDate, g.program);
+                        const total = PROGRAM_WEEKS[g.program];
+                        return (
+                          <option key={g.id} value={g.id}>
+                            {g.program} · {g.name} · {week ? `שבוע ${week}/${total}` : "לא פעיל"}
+                          </option>
+                        );
+                      })}
+                    </select>
+                  </div>
+
+                  <textarea
+                    value={closeText}
+                    onChange={(e) => setCloseText(e.target.value)}
+                    placeholder="טקסט הודעת הסגירה... (אופציונלי)"
+                    rows={4}
+                    className="border border-gray-200 rounded-xl px-4 py-3 text-gray-800 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent transition placeholder:text-gray-300 resize-none"
+                  />
+
+                  <button
+                    onClick={runCloseGroup}
+                    disabled={closing || !closeGroupId}
+                    className="bg-red-600 hover:bg-red-700 text-white font-semibold rounded-xl px-5 py-2.5 text-sm transition disabled:opacity-50 self-start"
+                  >
+                    {closing ? "מבצע..." : "בצע נוהל סגירה"}
+                  </button>
+
+                  {closeFeedback && <p className="text-sm text-gray-500">{closeFeedback}</p>}
+                </>
+              )}
+            </div>
+          </>
+        )}
+      </main>
+    </div>
+  );
+}

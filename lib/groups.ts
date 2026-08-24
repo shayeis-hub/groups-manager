@@ -31,6 +31,9 @@ export interface Group {
   createdAt: number; // timestamp for sort order
   userId: string;
   whatsappGroupId?: string; // WhatsApp group JID, e.g. "120363...@g.us"
+  whatsappGroupName?: string; // display name at the time it was linked
+  whatsappOpen?: boolean; // last known "who can send messages" state; unset = unknown
+  whatsappArchived?: boolean; // true once the end-of-cycle close procedure has run
 }
 
 // Returns the Sunday at or before the given date

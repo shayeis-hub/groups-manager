@@ -159,9 +159,16 @@ export default function Home() {
 
         <Link
           href="/sessions"
-          className="block text-center bg-white border border-gray-200 hover:border-indigo-300 hover:bg-indigo-50 text-gray-700 hover:text-indigo-700 font-semibold px-6 py-3 rounded-xl transition shadow-sm mb-6 sm:mb-8"
+          className="block text-center bg-white border border-gray-200 hover:border-indigo-300 hover:bg-indigo-50 text-gray-700 hover:text-indigo-700 font-semibold px-6 py-3 rounded-xl transition shadow-sm mb-3"
         >
           ממשק ניהול שיחות
+        </Link>
+
+        <Link
+          href="/whatsapp"
+          className="block text-center bg-white border border-gray-200 hover:border-indigo-300 hover:bg-indigo-50 text-gray-700 hover:text-indigo-700 font-semibold px-6 py-3 rounded-xl transition shadow-sm mb-6 sm:mb-8"
+        >
+          ניהול וואטסאפ
         </Link>
 
         {fetching ? (

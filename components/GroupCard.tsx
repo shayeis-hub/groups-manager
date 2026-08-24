@@ -68,9 +68,12 @@ export default function GroupCard({ group, clientCount, onDeleted, onUpdated }: 
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 px-5 py-4 sm:px-8 sm:py-5 hover:shadow-md transition-shadow" dir="rtl">
         {/* Name + week counter — always share the first line */}
         <div className="flex items-center justify-between gap-3">
-          <span className="text-xl sm:text-2xl font-bold text-gray-800 min-w-0 break-words">
+          <Link
+            href={`/groups/${group.id}`}
+            className="text-xl sm:text-2xl font-bold text-gray-800 min-w-0 break-words hover:text-indigo-700 transition"
+          >
             {group.name}
-          </span>
+          </Link>
 
           <div className="flex items-center gap-3 shrink-0">
             {/* Actions sit inline on desktop, and move to their own row on mobile */}

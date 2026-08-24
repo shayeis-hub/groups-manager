@@ -15,14 +15,25 @@ service cloud.firestore {
 
     // Written by the app, consumed by the local WhatsApp bridge service
     // (which uses the Admin SDK and so bypasses these rules entirely).
-    // Clients may only create+read their own commands, never edit/delete —
-    // status transitions belong solely to the bridge service.
+    // Clients may create/read/edit/delete only their own commands, and only
+    // while still 'pending' — once the bridge claims one (status flips to
+    // 'processing') these rules lock it, so an edit/delete request racing
+    // the bridge just fails instead of corrupting an in-flight send.
     match /whatsappCommands/{commandId} {
-      allow read: if request.auth != null && (request.auth.uid == resource.data.createdBy || isDietitian());
+      allow read: if request.auth != null && (request.auth.uid == resource.data.uid || isDietitian());
       allow create: if request.auth != null
-        && request.auth.uid == request.resource.data.createdBy
+        && request.auth.uid == request.resource.data.uid
         && request.resource.data.status == 'pending';
-      allow update, delete: if false;
+      allow update, delete: if request.auth != null
+        && request.auth.uid == resource.data.uid
+        && resource.data.status == 'pending';
+    }
+
+    // One doc per coach. Only the bridge service (Admin SDK, bypasses rules)
+    // sets status/qr/groups — the client's only legitimate write is bumping
+    // requestedAt to ask the bridge to open a connection.
+    match /whatsappSessions/{uid} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
     }
 
     match /plans/{planId} {
