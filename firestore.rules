@@ -37,18 +37,18 @@ service cloud.firestore {
     }
 
     // Reusable message+attachment library, applied in bulk to a group to
-    // pre-schedule a whole program's worth of sends. Shared across every
-    // coach (not scoped by uid) — the whole point is that one coach's set is
-    // reusable by the others. `uid` on each doc is who created it, kept only
-    // as info, not for access control.
+    // pre-schedule a whole program's worth of sends. Each coach's own —
+    // scoped by uid.
     match /messageTemplates/{templateId} {
-      allow read, write: if request.auth != null;
+      allow read, update, delete: if request.auth != null && request.auth.uid == resource.data.uid;
+      allow create: if request.auth != null && request.auth.uid == request.resource.data.uid;
     }
 
     // Named batches of templates (e.g. "קיץ - Start" vs "חורף - Start") that
-    // messageTemplates docs reference by setId. Shared, same reasoning.
+    // messageTemplates docs reference by setId. Same per-coach scoping.
     match /templateSets/{setId} {
-      allow read, write: if request.auth != null;
+      allow read, update, delete: if request.auth != null && request.auth.uid == resource.data.uid;
+      allow create: if request.auth != null && request.auth.uid == request.resource.data.uid;
     }
 
     match /plans/{planId} {

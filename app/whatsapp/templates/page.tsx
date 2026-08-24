@@ -31,10 +31,10 @@ export default function TemplatesPage() {
   const [applying, setApplying] = useState(false);
   const [applyFeedback, setApplyFeedback] = useState("");
 
-  // Shared across every coach — not scoped by uid, on purpose.
   useEffect(() => {
     if (!user) return;
-    return onSnapshot(collection(db, "templateSets"), (snap) => {
+    const q = query(collection(db, "templateSets"), where("uid", "==", user.uid));
+    return onSnapshot(q, (snap) => {
       setSets(
         snap.docs
           .map((d) => ({ id: d.id, ...d.data() } as TemplateSet))
@@ -45,7 +45,8 @@ export default function TemplatesPage() {
 
   useEffect(() => {
     if (!user) return;
-    return onSnapshot(collection(db, "messageTemplates"), (snap) => {
+    const q = query(collection(db, "messageTemplates"), where("uid", "==", user.uid));
+    return onSnapshot(q, (snap) => {
       setTemplates(
         snap.docs
           .map((d) => ({ id: d.id, ...d.data() } as MessageTemplate))
