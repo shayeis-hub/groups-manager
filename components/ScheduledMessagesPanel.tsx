@@ -114,6 +114,9 @@ export default function ScheduledMessagesPanel({ group }: Props) {
                 <div key={m.id} className="border border-gray-100 rounded-xl p-3 flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <p className="text-sm text-gray-800 break-words whitespace-pre-wrap">{m.text}</p>
+                    {m.attachment && (
+                      <p className="text-xs text-indigo-500 mt-1">קובץ מצורף: {m.attachment.name}</p>
+                    )}
                     <p className="text-xs text-gray-400 mt-1">
                       {m.scheduledFor?.toDate().toLocaleString("he-IL")}
                       {waGroupIds.length > 1 && ` · ${waGroupName(m.waGroupId) ?? m.waGroupId}`}

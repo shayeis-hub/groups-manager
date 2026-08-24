@@ -6,7 +6,7 @@ import { collection, doc, getDocs, onSnapshot, query, where } from "firebase/fir
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/context/AuthContext";
 import { Group, getCurrentWeek, PROGRAM_WEEKS } from "@/lib/groups";
-import { WhatsappSession, requestWhatsappConnection, queueWhatsappCommand } from "@/lib/whatsapp";
+import { WhatsappSession, requestWhatsappConnection, queueWhatsappCommand, uploadWhatsappAttachment } from "@/lib/whatsapp";
 import WhatsappConnectCard from "@/components/WhatsappConnectCard";
 
 const OPEN_STATE_LABEL: Record<string, string> = {
@@ -23,6 +23,7 @@ export default function WhatsappManagementPage() {
   const [fetchingGroups, setFetchingGroups] = useState(true);
   const [selectedGroupId, setSelectedGroupId] = useState("");
   const [text, setText] = useState("");
+  const [file, setFile] = useState<File | null>(null);
   const [scheduledAt, setScheduledAt] = useState("");
   const [sending, setSending] = useState(false);
   const [feedback, setFeedback] = useState("");
@@ -92,10 +93,11 @@ export default function WhatsappManagementPage() {
   );
 
   const sendMessage = async () => {
-    if (!user || !selectedGroup || !text.trim()) return;
+    if (!user || !selectedGroup || (!text.trim() && !file)) return;
     setSending(true);
     setFeedback("");
     try {
+      const attachment = file ? await uploadWhatsappAttachment(user.uid, file) : undefined;
       await Promise.all(
         (selectedGroup.whatsappGroups ?? []).map((link) =>
           queueWhatsappCommand({
@@ -103,13 +105,15 @@ export default function WhatsappManagementPage() {
             waGroupId: link.id,
             appGroupId: selectedGroup.id,
             type: "send",
-            text: text.trim(),
+            text: text.trim() || undefined,
+            attachment,
             scheduledFor: scheduledAt ? new Date(scheduledAt) : undefined,
           })
         )
       );
       setFeedback(scheduledAt ? "ההודעה תוזמנה." : "ההודעה נשלחה לתור.");
       setText("");
+      setFile(null);
       setScheduledAt("");
       setSelectedGroupId("");
     } catch (err) {
@@ -250,6 +254,25 @@ export default function WhatsappManagementPage() {
                     className="border border-gray-200 rounded-xl px-4 py-3 text-gray-800 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent transition placeholder:text-gray-300 resize-none"
                   />
 
+                  <div className="flex items-center gap-3">
+                    <label className="text-sm font-semibold text-indigo-600 hover:underline cursor-pointer">
+                      {file ? "החלף קובץ" : "צרף קובץ"}
+                      <input
+                        type="file"
+                        onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+                        className="hidden"
+                      />
+                    </label>
+                    {file && (
+                      <span className="text-sm text-gray-500 flex items-center gap-2 min-w-0">
+                        <span className="truncate">{file.name}</span>
+                        <button type="button" onClick={() => setFile(null)} className="text-gray-400 hover:text-gray-600 shrink-0">
+                          ✕
+                        </button>
+                      </span>
+                    )}
+                  </div>
+
                   <div className="flex flex-wrap items-center gap-3">
                     <label className="text-sm text-gray-500 flex items-center gap-2">
                       תזמון (אופציונלי):
@@ -262,7 +285,7 @@ export default function WhatsappManagementPage() {
                     </label>
                     <button
                       onClick={sendMessage}
-                      disabled={sending || !selectedGroupId || !text.trim()}
+                      disabled={sending || !selectedGroupId || (!text.trim() && !file)}
                       className="mr-auto bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl px-5 py-2 text-sm transition disabled:opacity-50"
                     >
                       {sending ? "שולח..." : scheduledAt ? "תזמן שליחה" : "שלח עכשיו"}
