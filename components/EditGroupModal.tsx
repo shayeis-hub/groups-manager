@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { doc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { Group } from "@/lib/groups";
+import { Group, WhatsappGroupLink } from "@/lib/groups";
 import WhatsappGroupPicker from "@/components/WhatsappGroupPicker";
 
 interface Props {
@@ -16,8 +16,7 @@ export default function EditGroupModal({ group, onClose, onSaved }: Props) {
   const [name, setName] = useState(group.name);
   const [startDate, setStartDate] = useState(group.startDate);
   const [coachName, setCoachName] = useState(group.coachName ?? "");
-  const [whatsappGroupId, setWhatsappGroupId] = useState(group.whatsappGroupId ?? "");
-  const [whatsappGroupName, setWhatsappGroupName] = useState(group.whatsappGroupName ?? "");
+  const [whatsappGroups, setWhatsappGroups] = useState<WhatsappGroupLink[]>(group.whatsappGroups ?? []);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -31,8 +30,7 @@ export default function EditGroupModal({ group, onClose, onSaved }: Props) {
         name: name.trim(),
         startDate,
         coachName: coachName.trim(),
-        whatsappGroupId: whatsappGroupId.trim(),
-        whatsappGroupName: whatsappGroupName.trim(),
+        whatsappGroups,
       });
       onSaved();
       onClose();
@@ -84,12 +82,9 @@ export default function EditGroupModal({ group, onClose, onSaved }: Props) {
 
           <WhatsappGroupPicker
             uid={group.userId}
-            value={whatsappGroupId}
+            value={whatsappGroups}
             excludeGroupId={group.id}
-            onChange={(id, name) => {
-              setWhatsappGroupId(id);
-              setWhatsappGroupName(name);
-            }}
+            onChange={setWhatsappGroups}
           />
 
           {error && (

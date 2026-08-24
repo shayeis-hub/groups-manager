@@ -22,6 +22,11 @@ export const PROGRAM_COLORS: Record<Program, { bg: string; text: string; border:
   VIP:            { bg: "bg-amber-100",   text: "text-amber-700",   border: "border-amber-200" },
 };
 
+export interface WhatsappGroupLink {
+  id: string; // WhatsApp group JID, e.g. "120363...@g.us"
+  name: string; // display name at the time it was linked
+}
+
 export interface Group {
   id: string;
   name: string;
@@ -30,8 +35,8 @@ export interface Group {
   coachName?: string; // free text — groups created before this field don't have one yet
   createdAt: number; // timestamp for sort order
   userId: string;
-  whatsappGroupId?: string; // WhatsApp group JID, e.g. "120363...@g.us"
-  whatsappGroupName?: string; // display name at the time it was linked
+  // Usually one WhatsApp group, but Start cohorts are sometimes split across two.
+  whatsappGroups?: WhatsappGroupLink[];
   whatsappOpen?: boolean; // last known "who can send messages" state; unset = unknown
   whatsappArchived?: boolean; // true once the end-of-cycle close procedure has run
 }

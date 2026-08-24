@@ -4,7 +4,7 @@ import { useState } from "react";
 import { collection, addDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/context/AuthContext";
-import { PROGRAMS, Program } from "@/lib/groups";
+import { PROGRAMS, Program, WhatsappGroupLink } from "@/lib/groups";
 import WhatsappGroupPicker from "@/components/WhatsappGroupPicker";
 
 interface Props {
@@ -20,8 +20,7 @@ export default function AddGroupModal({ onClose, onAdded }: Props) {
   // Defaults to whoever's creating the group — most groups are the logged-in
   // coach's own cohort; still editable for groups run by someone else.
   const [coachName, setCoachName] = useState(user?.displayName ?? "");
-  const [whatsappGroupId, setWhatsappGroupId] = useState("");
-  const [whatsappGroupName, setWhatsappGroupName] = useState("");
+  const [whatsappGroups, setWhatsappGroups] = useState<WhatsappGroupLink[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -36,8 +35,7 @@ export default function AddGroupModal({ onClose, onAdded }: Props) {
         program,
         startDate,
         coachName: coachName.trim(),
-        whatsappGroupId: whatsappGroupId.trim(),
-        whatsappGroupName: whatsappGroupName.trim(),
+        whatsappGroups,
         createdAt: Date.now(),
         userId: user.uid,
       });
@@ -104,14 +102,7 @@ export default function AddGroupModal({ onClose, onAdded }: Props) {
           </div>
 
           {user && (
-            <WhatsappGroupPicker
-              uid={user.uid}
-              value={whatsappGroupId}
-              onChange={(id, name) => {
-                setWhatsappGroupId(id);
-                setWhatsappGroupName(name);
-              }}
-            />
+            <WhatsappGroupPicker uid={user.uid} value={whatsappGroups} onChange={setWhatsappGroups} />
           )}
 
           {error && (

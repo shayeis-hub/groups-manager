@@ -45,7 +45,7 @@ export default function WhatsappManagementPage() {
       setGroups(
         snap.docs
           .map((d) => ({ id: d.id, ...d.data() } as Group))
-          .filter((g) => g.whatsappGroupId && !g.whatsappArchived)
+          .filter((g) => g.whatsappGroups && g.whatsappGroups.length > 0 && !g.whatsappArchived)
           .sort((a, b) => a.name.localeCompare(b.name, "he"))
       );
     } finally {
@@ -71,8 +71,10 @@ export default function WhatsappManagementPage() {
     setBulkBusy(type);
     try {
       await Promise.all(
-        groups.map((g) =>
-          queueWhatsappCommand({ uid: user.uid, waGroupId: g.whatsappGroupId!, appGroupId: g.id, type })
+        groups.flatMap((g) =>
+          (g.whatsappGroups ?? []).map((link) =>
+            queueWhatsappCommand({ uid: user.uid, waGroupId: link.id, appGroupId: g.id, type })
+          )
         )
       );
     } finally {
@@ -87,14 +89,18 @@ export default function WhatsappManagementPage() {
     setSending(true);
     setFeedback("");
     try {
-      await queueWhatsappCommand({
-        uid: user.uid,
-        waGroupId: selectedGroup.whatsappGroupId!,
-        appGroupId: selectedGroup.id,
-        type: "send",
-        text: text.trim(),
-        scheduledFor: scheduledAt ? new Date(scheduledAt) : undefined,
-      });
+      await Promise.all(
+        (selectedGroup.whatsappGroups ?? []).map((link) =>
+          queueWhatsappCommand({
+            uid: user.uid,
+            waGroupId: link.id,
+            appGroupId: selectedGroup.id,
+            type: "send",
+            text: text.trim(),
+            scheduledFor: scheduledAt ? new Date(scheduledAt) : undefined,
+          })
+        )
+      );
       setFeedback(scheduledAt ? "ההודעה תוזמנה." : "ההודעה נשלחה לתור.");
       setText("");
       setScheduledAt("");
@@ -110,10 +116,12 @@ export default function WhatsappManagementPage() {
 
   const runCloseGroup = async () => {
     if (!user || !closeTargetGroup) return;
+    const links = closeTargetGroup.whatsappGroups ?? [];
     const sendStep = closeText.trim() ? "לשלוח את הודעת הסגירה, " : "";
+    const groupsNote = links.length > 1 ? ` (${links.length} קבוצות וואטסאפ מקושרות)` : "";
     if (
       !confirm(
-        `לנעול את "${closeTargetGroup.name}" לכתיבת אדמינים בלבד, ${sendStep}ולהעביר את הקבוצה לארכיון?\n\nזו פעולה שאי אפשר לבטל אוטומטית מתוך האפליקציה.`
+        `לנעול את "${closeTargetGroup.name}"${groupsNote} לכתיבת אדמינים בלבד, ${sendStep}ולהעביר לארכיון?\n\nזו פעולה שאי אפשר לבטל אוטומטית מתוך האפליקציה.`
       )
     ) {
       return;
@@ -121,13 +129,17 @@ export default function WhatsappManagementPage() {
     setClosing(true);
     setCloseFeedback("");
     try {
-      await queueWhatsappCommand({
-        uid: user.uid,
-        waGroupId: closeTargetGroup.whatsappGroupId!,
-        appGroupId: closeTargetGroup.id,
-        type: "closeGroup",
-        text: closeText.trim() || undefined,
-      });
+      await Promise.all(
+        (closeTargetGroup.whatsappGroups ?? []).map((link) =>
+          queueWhatsappCommand({
+            uid: user.uid,
+            waGroupId: link.id,
+            appGroupId: closeTargetGroup.id,
+            type: "closeGroup",
+            text: closeText.trim() || undefined,
+          })
+        )
+      );
       setCloseFeedback("נוהל הסגירה נשלח לביצוע.");
       setCloseText("");
       setCloseGroupId("");
@@ -216,6 +228,7 @@ export default function WhatsappManagementPage() {
                         return (
                           <option key={g.id} value={g.id}>
                             {g.program} · {g.name} · {week ? `שבוע ${week}/${total}` : "לא פעיל"}
+                            {(g.whatsappGroups?.length ?? 0) > 1 ? ` (${g.whatsappGroups!.length} קבוצות)` : ""}
                           </option>
                         );
                       })}
@@ -280,6 +293,7 @@ export default function WhatsappManagementPage() {
                         return (
                           <option key={g.id} value={g.id}>
                             {g.program} · {g.name} · {week ? `שבוע ${week}/${total}` : "לא פעיל"}
+                            {(g.whatsappGroups?.length ?? 0) > 1 ? ` (${g.whatsappGroups!.length} קבוצות)` : ""}
                           </option>
                         );
                       })}

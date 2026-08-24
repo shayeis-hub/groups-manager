@@ -25,15 +25,18 @@ export default function ScheduledMessagesPanel({ group }: Props) {
   const [editWhen, setEditWhen] = useState("");
   const [error, setError] = useState("");
 
+  const waGroupIds = (group.whatsappGroups ?? []).map((l) => l.id);
+  const waGroupIdsKey = waGroupIds.join(",");
+
   useEffect(() => {
-    if (!open || !group.whatsappGroupId) return;
+    if (!open || waGroupIds.length === 0) return;
     const q = query(
       collection(db, "whatsappCommands"),
       // Firestore rules restrict reads to `uid == request.auth.uid`, which
       // it can only verify statically if the query itself filters on that
       // same field — otherwise the whole query is denied, not just filtered.
       where("uid", "==", group.userId),
-      where("waGroupId", "==", group.whatsappGroupId),
+      where("waGroupId", "in", waGroupIds),
       where("type", "==", "send"),
       where("status", "==", "pending")
     );
@@ -49,9 +52,12 @@ export default function ScheduledMessagesPanel({ group }: Props) {
       },
       (err) => setError(err.message)
     );
-  }, [open, group.whatsappGroupId, group.userId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, waGroupIdsKey, group.userId]);
 
-  if (!group.whatsappGroupId) return null;
+  if (waGroupIds.length === 0) return null;
+
+  const waGroupName = (id: string) => group.whatsappGroups?.find((l) => l.id === id)?.name;
 
   const startEdit = (m: WhatsappCommand) => {
     setEditingId(m.id);
@@ -108,7 +114,10 @@ export default function ScheduledMessagesPanel({ group }: Props) {
                 <div key={m.id} className="border border-gray-100 rounded-xl p-3 flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <p className="text-sm text-gray-800 break-words whitespace-pre-wrap">{m.text}</p>
-                    <p className="text-xs text-gray-400 mt-1">{m.scheduledFor?.toDate().toLocaleString("he-IL")}</p>
+                    <p className="text-xs text-gray-400 mt-1">
+                      {m.scheduledFor?.toDate().toLocaleString("he-IL")}
+                      {waGroupIds.length > 1 && ` · ${waGroupName(m.waGroupId) ?? m.waGroupId}`}
+                    </p>
                   </div>
                   <div className="flex gap-2 shrink-0">
                     <button onClick={() => startEdit(m)} className="text-xs font-semibold text-indigo-600 hover:underline">ערוך</button>
