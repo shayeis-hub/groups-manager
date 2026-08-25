@@ -254,7 +254,7 @@ export default function WhatsappManagementPage() {
                         {allSelected ? "בטל הכל" : "בחר הכל"}
                       </button>
                     </div>
-                    <div className="border border-gray-200 rounded-xl max-h-56 overflow-y-auto">
+                    <div className="border border-gray-200 rounded-xl max-h-32 overflow-y-auto">
                       {composerGroups.map((g) => {
                         const week = getCurrentWeek(g.startDate, g.program);
                         const total = PROGRAM_WEEKS[g.program];
