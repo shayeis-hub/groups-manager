@@ -21,7 +21,7 @@ export default function WhatsappManagementPage() {
   const [session, setSession] = useState<WhatsappSession | null>(null);
   const [groups, setGroups] = useState<Group[]>([]);
   const [fetchingGroups, setFetchingGroups] = useState(true);
-  const [selectedGroupId, setSelectedGroupId] = useState("");
+  const [selectedGroupIds, setSelectedGroupIds] = useState<string[]>([]);
   const [text, setText] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [scheduledAt, setScheduledAt] = useState("");
@@ -83,8 +83,6 @@ export default function WhatsappManagementPage() {
     }
   };
 
-  const selectedGroup = groups.find((g) => g.id === selectedGroupId);
-
   // Newest cycle (lowest current week) first; inactive groups (no current
   // week) sort last.
   const composerGroups = [...groups].sort(
@@ -92,30 +90,47 @@ export default function WhatsappManagementPage() {
       (getCurrentWeek(a.startDate, a.program) ?? Infinity) - (getCurrentWeek(b.startDate, b.program) ?? Infinity)
   );
 
+  const selectedGroups = composerGroups.filter((g) => selectedGroupIds.includes(g.id));
+  const allSelected = composerGroups.length > 0 && selectedGroupIds.length === composerGroups.length;
+
+  const toggleGroup = (id: string) => {
+    setSelectedGroupIds((ids) => (ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id]));
+  };
+
+  const toggleSelectAll = () => {
+    setSelectedGroupIds(allSelected ? [] : composerGroups.map((g) => g.id));
+  };
+
   const sendMessage = async () => {
-    if (!user || !selectedGroup || (!text.trim() && !file)) return;
+    if (!user || selectedGroups.length === 0 || (!text.trim() && !file)) return;
     setSending(true);
     setFeedback("");
     try {
       const attachment = file ? await uploadWhatsappAttachment(user.uid, file) : undefined;
       await Promise.all(
-        (selectedGroup.whatsappGroups ?? []).map((link) =>
-          queueWhatsappCommand({
-            uid: user.uid,
-            waGroupId: link.id,
-            appGroupId: selectedGroup.id,
-            type: "send",
-            text: text.trim() || undefined,
-            attachment,
-            scheduledFor: scheduledAt ? new Date(scheduledAt) : undefined,
-          })
+        selectedGroups.flatMap((g) =>
+          (g.whatsappGroups ?? []).map((link) =>
+            queueWhatsappCommand({
+              uid: user.uid,
+              waGroupId: link.id,
+              appGroupId: g.id,
+              type: "send",
+              text: text.trim() || undefined,
+              attachment,
+              scheduledFor: scheduledAt ? new Date(scheduledAt) : undefined,
+            })
+          )
         )
       );
-      setFeedback(scheduledAt ? "ההודעה תוזמנה." : "ההודעה נשלחה לתור.");
+      setFeedback(
+        scheduledAt
+          ? `ההודעה תוזמנה ל-${selectedGroups.length} קבוצות.`
+          : `ההודעה נשלחה לתור עבור ${selectedGroups.length} קבוצות.`
+      );
       setText("");
       setFile(null);
       setScheduledAt("");
-      setSelectedGroupId("");
+      setSelectedGroupIds([]);
     } catch (err) {
       setFeedback(err instanceof Error ? err.message : "שגיאה בשליחה, נסה שוב");
     } finally {
@@ -233,24 +248,33 @@ export default function WhatsappManagementPage() {
               ) : (
                 <>
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-sm font-medium text-gray-600">קבוצה</label>
-                    <select
-                      value={selectedGroupId}
-                      onChange={(e) => setSelectedGroupId(e.target.value)}
-                      className="border border-gray-200 rounded-xl px-4 py-3 text-gray-800 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent transition"
-                    >
-                      <option value="">בחר קבוצה...</option>
+                    <div className="flex items-center justify-between">
+                      <label className="text-sm font-medium text-gray-600">קבוצות ({selectedGroupIds.length} נבחרו)</label>
+                      <button type="button" onClick={toggleSelectAll} className="text-xs font-semibold text-indigo-600 hover:underline">
+                        {allSelected ? "בטל הכל" : "בחר הכל"}
+                      </button>
+                    </div>
+                    <div className="border border-gray-200 rounded-xl max-h-56 overflow-y-auto">
                       {composerGroups.map((g) => {
                         const week = getCurrentWeek(g.startDate, g.program);
                         const total = PROGRAM_WEEKS[g.program];
+                        const checked = selectedGroupIds.includes(g.id);
                         return (
-                          <option key={g.id} value={g.id}>
-                            {g.program} · {g.name} · {week ? `שבוע ${week}/${total}` : "לא פעיל"}
-                            {(g.whatsappGroups?.length ?? 0) > 1 ? ` (${g.whatsappGroups!.length} קבוצות)` : ""}
-                          </option>
+                          <label
+                            key={g.id}
+                            className={`flex items-center gap-2 px-4 py-2.5 text-sm border-b last:border-b-0 border-gray-100 cursor-pointer transition ${
+                              checked ? "bg-indigo-50" : "hover:bg-gray-50"
+                            }`}
+                          >
+                            <input type="checkbox" checked={checked} onChange={() => toggleGroup(g.id)} className="shrink-0" />
+                            <span className={checked ? "text-indigo-800 font-medium" : "text-gray-700"}>
+                              {g.program} · {g.name} · {week ? `שבוע ${week}/${total}` : "לא פעיל"}
+                              {(g.whatsappGroups?.length ?? 0) > 1 ? ` (${g.whatsappGroups!.length} קבוצות)` : ""}
+                            </span>
+                          </label>
                         );
                       })}
-                    </select>
+                    </div>
                   </div>
 
                   <textarea
@@ -292,7 +316,7 @@ export default function WhatsappManagementPage() {
                     </label>
                     <button
                       onClick={sendMessage}
-                      disabled={sending || !selectedGroupId || (!text.trim() && !file)}
+                      disabled={sending || selectedGroupIds.length === 0 || (!text.trim() && !file)}
                       className="mr-auto bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl px-5 py-2 text-sm transition disabled:opacity-50"
                     >
                       {sending ? "שולח..." : scheduledAt ? "תזמן שליחה" : "שלח עכשיו"}
