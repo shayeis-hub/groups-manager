@@ -123,6 +123,18 @@ export default function ClientPage() {
     }
   };
 
+  const toggleQuestionnaire = async () => {
+    if (!client || isDietitian) return;
+    const next = !client.openingQuestionnaire;
+    setClient({ ...client, openingQuestionnaire: next });
+    try {
+      await updateDoc(doc(db, "clients", clientId), { openingQuestionnaire: next });
+    } catch (err) {
+      console.error("toggle questionnaire error:", err);
+      setClient((c) => (c ? { ...c, openingQuestionnaire: !next } : c));
+    }
+  };
+
   const deleteClient = async () => {
     if (!client) return;
     if (!confirm(`למחוק את הלקוח "${client.name}"?`)) return;
@@ -170,7 +182,25 @@ export default function ClientPage() {
               ›
             </Link>
             <div className="min-w-0">
-              <h1 className="text-xl sm:text-2xl font-black text-gray-800 break-words">{client.name}</h1>
+              <div className="flex items-center gap-2 flex-wrap">
+                <h1 className="text-xl sm:text-2xl font-black text-gray-800 break-words">{client.name}</h1>
+                <label
+                  className={`flex items-center gap-1.5 text-xs sm:text-sm font-medium rounded-full border px-2.5 py-1 select-none ${
+                    client.openingQuestionnaire
+                      ? "bg-green-50 text-green-700 border-green-200"
+                      : "bg-gray-50 text-gray-400 border-gray-200"
+                  } ${isDietitian ? "" : "cursor-pointer hover:bg-green-50/60"}`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={!!client.openingQuestionnaire}
+                    onChange={toggleQuestionnaire}
+                    disabled={isDietitian}
+                    className="w-3.5 h-3.5 accent-green-600"
+                  />
+                  שאלון פתיחה
+                </label>
+              </div>
               <p className="text-sm text-gray-400 break-words">
                 {group ? `${group.program} · ${group.name} · ` : ""}
                 {week ? `שבוע ${week} מתוך ${total}` : "התוכנית הסתיימה"}

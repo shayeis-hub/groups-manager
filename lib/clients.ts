@@ -5,6 +5,7 @@ export interface Client {
   portalUrl: string;
   createdAt: number;
   userId: string;
+  openingQuestionnaire?: boolean; // whether the client filled the intake questionnaire
 }
 
 export interface Session {

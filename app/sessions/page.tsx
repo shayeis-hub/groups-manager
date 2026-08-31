@@ -113,6 +113,9 @@ export default function SessionsOverviewPage() {
                     <span className="text-xs text-gray-400 shrink-0 whitespace-nowrap">{group.program} · {group.name}</span>
                   </div>
                   <div className="flex flex-col gap-1 text-sm">
+                    <p className={client.openingQuestionnaire ? "text-green-600" : "text-red-500"}>
+                      {client.openingQuestionnaire ? "✓ מילא שאלון פתיחה" : "לא מילא שאלון פתיחה"}
+                    </p>
                     <p className="text-gray-600">
                       שבוע נוכחי בתוכנית: <span className="font-semibold text-gray-800">{currentWeek}</span>
                     </p>
