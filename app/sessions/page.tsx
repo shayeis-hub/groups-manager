@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { collection, doc, getDoc, getDocs, query, where, orderBy, limit } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -18,9 +18,15 @@ interface Row {
   lastDietitianWeek: number | null;
 }
 
+interface GroupSection {
+  group: Group;
+  rows: Row[];
+}
+
 export default function SessionsOverviewPage() {
   const { user, loading } = useAuth();
   const [rows, setRows] = useState<Row[] | null>(null);
+  const [openGroupIds, setOpenGroupIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (!user) return;
@@ -66,6 +72,31 @@ export default function SessionsOverviewPage() {
     run();
   }, [user]);
 
+  const sections = useMemo<GroupSection[]>(() => {
+    if (!rows) return [];
+    const byGroup = new Map<string, GroupSection>();
+    for (const row of rows) {
+      const existing = byGroup.get(row.group.id);
+      if (existing) existing.rows.push(row);
+      else byGroup.set(row.group.id, { group: row.group, rows: [row] });
+    }
+    return Array.from(byGroup.values())
+      .map((section) => ({
+        ...section,
+        rows: section.rows.sort((a, b) => a.client.name.localeCompare(b.client.name, "he")),
+      }))
+      .sort((a, b) => b.group.startDate.localeCompare(a.group.startDate)); // newest cycle first
+  }, [rows]);
+
+  const toggleGroup = (groupId: string) => {
+    setOpenGroupIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(groupId)) next.delete(groupId);
+      else next.add(groupId);
+      return next;
+    });
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -102,47 +133,72 @@ export default function SessionsOverviewPage() {
           <p className="text-gray-400 text-sm text-center py-20">אין לקוחות ליווי בקבוצות פעילות כרגע</p>
         ) : (
           <div className="flex flex-col gap-3">
-            {rows.map(({ client, group, currentWeek, lastCoachWeek, lastDietitianWeek }) => (
-              <div
-                key={client.id}
-                className="bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow"
-              >
-                <Link href={`/clients/${client.id}`} className="block px-5 sm:px-6 py-4">
-                  <div className="flex items-center justify-between gap-3 mb-2">
-                    <span className="text-lg font-bold text-gray-800 min-w-0 break-words">{client.name}</span>
-                    <span className="text-xs text-gray-400 shrink-0 whitespace-nowrap">{group.program} · {group.name}</span>
-                  </div>
-                  <div className="flex flex-col gap-1 text-sm">
-                    <p className={client.openingQuestionnaire ? "text-green-600" : "text-red-500"}>
-                      {client.openingQuestionnaire ? "✓ מילא שאלון פתיחה" : "לא מילא שאלון פתיחה"}
-                    </p>
-                    <p className="text-gray-600">
-                      שבוע נוכחי בתוכנית: <span className="font-semibold text-gray-800">{currentWeek}</span>
-                    </p>
-                    <p className={lastCoachWeek === null ? "text-red-500" : "text-gray-600"}>
-                      {lastCoachWeek === null
-                        ? "אין עדיין שיחה עם מאמן"
-                        : <>שיחה אחרונה עם מאמן בוצעה בשבוע: <span className="font-semibold text-gray-800">{lastCoachWeek}</span></>}
-                    </p>
-                    <p className={lastDietitianWeek === null ? "text-red-500" : "text-gray-600"}>
-                      {lastDietitianWeek === null
-                        ? "אין עדיין שיחה עם תזונאית"
-                        : <>שיחה אחרונה עם תזונאית בוצעה בשבוע: <span className="font-semibold text-gray-800">{lastDietitianWeek}</span></>}
-                    </p>
-                  </div>
-                </Link>
-                {client.portalUrl && (
-                  <a
-                    href={client.portalUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center justify-center gap-1.5 border-t border-gray-100 px-5 sm:px-6 py-2.5 text-sm font-semibold text-indigo-600 hover:bg-indigo-50 transition rounded-b-2xl"
+            {sections.map(({ group, rows: groupRows }) => {
+              const isOpen = openGroupIds.has(group.id);
+              return (
+                <div key={group.id} className="rounded-2xl border border-gray-100 overflow-hidden bg-white shadow-sm">
+                  <button
+                    onClick={() => toggleGroup(group.id)}
+                    className="w-full flex items-center justify-between px-5 sm:px-6 py-4 hover:bg-gray-50 transition-colors"
+                    dir="rtl"
                   >
-                    כרטיס לקוח ↗
-                  </a>
-                )}
-              </div>
-            ))}
+                    <div className="flex items-center gap-3">
+                      <span className="text-lg font-bold text-gray-800">{group.program} · {group.name}</span>
+                      <span className="text-sm text-gray-400">{groupRows.length} לקוחות</span>
+                    </div>
+                    <svg
+                      className={`w-5 h-5 text-gray-400 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}
+                      fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+
+                  {isOpen && (
+                    <div className="flex flex-col gap-3 px-3 sm:px-4 pb-4 pt-1">
+                      {groupRows.map(({ client, currentWeek, lastCoachWeek, lastDietitianWeek }) => (
+                        <div
+                          key={client.id}
+                          className="bg-white rounded-2xl border border-gray-100 hover:shadow-md transition-shadow"
+                        >
+                          <Link href={`/clients/${client.id}`} className="block px-5 py-4">
+                            <span className="text-lg font-bold text-gray-800 min-w-0 break-words block mb-2">{client.name}</span>
+                            <div className="flex flex-col gap-1 text-sm">
+                              <p className={client.openingQuestionnaire ? "text-green-600" : "text-red-500"}>
+                                {client.openingQuestionnaire ? "✓ מילא שאלון פתיחה" : "לא מילא שאלון פתיחה"}
+                              </p>
+                              <p className="text-gray-600">
+                                שבוע נוכחי בתוכנית: <span className="font-semibold text-gray-800">{currentWeek}</span>
+                              </p>
+                              <p className={lastCoachWeek === null ? "text-red-500" : "text-gray-600"}>
+                                {lastCoachWeek === null
+                                  ? "אין עדיין שיחה עם מאמן"
+                                  : <>שיחה אחרונה עם מאמן בוצעה בשבוע: <span className="font-semibold text-gray-800">{lastCoachWeek}</span></>}
+                              </p>
+                              <p className={lastDietitianWeek === null ? "text-red-500" : "text-gray-600"}>
+                                {lastDietitianWeek === null
+                                  ? "אין עדיין שיחה עם תזונאית"
+                                  : <>שיחה אחרונה עם תזונאית בוצעה בשבוע: <span className="font-semibold text-gray-800">{lastDietitianWeek}</span></>}
+                              </p>
+                            </div>
+                          </Link>
+                          {client.portalUrl && (
+                            <a
+                              href={client.portalUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center justify-center gap-1.5 border-t border-gray-100 px-5 py-2.5 text-sm font-semibold text-indigo-600 hover:bg-indigo-50 transition rounded-b-2xl"
+                            >
+                              כרטיס לקוח ↗
+                            </a>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         )}
       </main>
