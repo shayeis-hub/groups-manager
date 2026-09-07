@@ -47,12 +47,22 @@ const db = getFirestore(app);
 const bucket = getStorage(app).bucket();
 
 // Parses "בסיס - שבוע 3 - פתיחה.mp4" / "שבוע 5- סיום.mp4" / "שבוע 3 פתיחה.mp4"
-// into { week: 3, kind: "פתיחה" }. Tolerant of missing/odd spacing around
-// the dash since the source files aren't perfectly consistent.
+// into { week: 3, kind: "פתיחה", extra: null }. Tolerant of missing/odd
+// spacing around the dash since the source files aren't perfectly
+// consistent. Anything trailing the kind word (e.g. "נוספת" in "שבוע 6 -
+// פתיחה נוספת.mp4") is captured as `extra` so a second/alternate take for
+// the same week+kind gets its own template instead of silently overwriting
+// the first one.
 function parseFileName(name) {
   const m = name.match(/שבוע\s*(\d+)\s*-?\s*(פתיחה|סיום)/);
   if (!m) return null;
-  return { week: Number(m[1]), kind: m[2] };
+  const week = Number(m[1]);
+  const kind = m[2];
+  const tailStart = m.index + m[0].length;
+  const dotIndex = name.toLowerCase().lastIndexOf(".mp4");
+  const tail = name.slice(tailStart, dotIndex === -1 ? undefined : dotIndex);
+  const extra = tail.replace(/^[\s-]+|[\s-]+$/g, "").trim();
+  return { week, kind, extra: extra || null };
 }
 
 const KIND_DAY = { "פתיחה": 0, "סיום": 4 }; // Sunday / Thursday
@@ -78,8 +88,8 @@ async function ensureTemplateSet(name, program) {
   return ref.id;
 }
 
-async function ensureTemplate({ setId, week, kind, storagePath, size, originalName }) {
-  const name = `${kind} שבוע ${week}`;
+async function ensureTemplate({ setId, week, kind, extra, storagePath, size, originalName }) {
+  const name = extra ? `${kind} שבוע ${week} - ${extra}` : `${kind} שבוע ${week}`;
   const existing = await db
     .collection("messageTemplates")
     .where("uid", "==", COACH_UID)
@@ -146,14 +156,16 @@ async function run() {
       }
       const localPath = join(dir, fileName);
       const size = statSync(localPath).size;
-      const storagePath = `template-attachments/${COACH_UID}/${programLabel}/${season}/week-${parsed.week}-${KIND_SLUG[parsed.kind]}.mp4`;
+      const slug = KIND_SLUG[parsed.kind] + (parsed.extra ? `-${parsed.extra}` : "");
+      const storagePath = `template-attachments/${COACH_UID}/${programLabel}/${season}/week-${parsed.week}-${slug}.mp4`;
 
-      console.log(`  ${fileName} -> שבוע ${parsed.week}, ${parsed.kind}`);
+      console.log(`  ${fileName} -> שבוע ${parsed.week}, ${parsed.kind}${parsed.extra ? ` (${parsed.extra})` : ""}`);
       await uploadIfMissing(localPath, storagePath);
       await ensureTemplate({
         setId,
         week: parsed.week,
         kind: parsed.kind,
+        extra: parsed.extra,
         storagePath,
         size,
         originalName: fileName,
