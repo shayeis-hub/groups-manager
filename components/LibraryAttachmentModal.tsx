@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { collection, getDocs, query, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/context/AuthContext";
-import { WhatsappAttachment } from "@/lib/whatsapp";
+import { WhatsappAttachment, previewStorageFile } from "@/lib/whatsapp";
 import { TemplateSet, MessageTemplate } from "@/lib/messageTemplates";
 
 interface Props {
@@ -126,18 +126,32 @@ export default function LibraryAttachmentModal({ onClose, onSelect }: Props) {
                   {isOpen && (
                     <div className="flex flex-wrap gap-2 px-4 pb-3">
                       {templates.map((t) => (
-                        <button
+                        <div
                           key={t.id}
-                          type="button"
-                          onClick={() => {
-                            onSelect(t.attachment!);
-                            onClose();
-                          }}
-                          title={t.attachment?.name}
-                          className="text-sm font-medium text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded-full px-3 py-1.5 transition"
+                          className="flex items-center gap-1 bg-indigo-50 hover:bg-indigo-100 rounded-full pr-1 pl-3 py-1 transition"
                         >
-                          {t.name}
-                        </button>
+                          <button
+                            type="button"
+                            onClick={() => previewStorageFile(t.attachment!.path)}
+                            title="תצוגה מקדימה"
+                            className="flex items-center justify-center w-6 h-6 rounded-full text-indigo-500 hover:text-indigo-800 hover:bg-indigo-200 transition shrink-0"
+                          >
+                            <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+                              <path d="M6 4l10 6-10 6V4z" />
+                            </svg>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              onSelect(t.attachment!);
+                              onClose();
+                            }}
+                            title={t.attachment?.name}
+                            className="text-sm font-medium text-indigo-700 py-0.5"
+                          >
+                            {t.name}
+                          </button>
+                        </div>
                       ))}
                     </div>
                   )}

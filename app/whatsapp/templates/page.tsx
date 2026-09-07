@@ -14,6 +14,7 @@ import {
   deleteTemplateSet,
   applyTemplatesToGroup,
 } from "@/lib/messageTemplates";
+import { previewStorageFile } from "@/lib/whatsapp";
 import TemplateForm from "@/components/TemplateForm";
 
 export default function TemplatesPage() {
@@ -307,6 +308,9 @@ export default function TemplatesPage() {
                               {t.text && <p className="text-sm text-gray-600 mt-1 break-words whitespace-pre-wrap">{t.text}</p>}
                             </div>
                             <div className="flex gap-2 shrink-0">
+                              {t.attachment && (
+                                <button onClick={() => previewStorageFile(t.attachment!.path)} className="text-xs font-semibold text-indigo-600 hover:underline">תצוגה מקדימה</button>
+                              )}
                               <button onClick={() => setEditingId(t.id)} className="text-xs font-semibold text-indigo-600 hover:underline">ערוך</button>
                               <button onClick={() => deleteMessageTemplate(t.id)} className="text-xs font-semibold text-red-500 hover:underline">מחק</button>
                             </div>

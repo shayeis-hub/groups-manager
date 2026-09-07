@@ -8,7 +8,7 @@ import {
   serverTimestamp,
   Timestamp,
 } from "firebase/firestore";
-import { ref, uploadBytes } from "firebase/storage";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { db, storage } from "@/lib/firebase";
 
 export type WhatsappCommandType = "send" | "open" | "close" | "closeGroup";
@@ -59,6 +59,23 @@ export async function uploadWhatsappAttachment(uid: string, file: File): Promise
   const path = `whatsapp-attachments/${uid}/${Date.now()}-${file.name}`;
   await uploadBytes(ref(storage, path), file);
   return { path, name: file.name, type: file.type || "application/octet-stream" };
+}
+
+// Opens a blank tab synchronously (must be called directly from a click
+// handler, before any await — otherwise the browser treats the later
+// window.open as a popup and blocks it) and points it at the file's
+// download URL once resolved. Lets the coach preview a video before
+// attaching or sending it.
+export function previewStorageFile(path: string) {
+  const tab = window.open("", "_blank");
+  getDownloadURL(ref(storage, path))
+    .then((url) => {
+      if (tab) tab.location.href = url;
+    })
+    .catch(() => {
+      tab?.close();
+      alert("שגיאה בטעינת הקובץ לתצוגה מקדימה");
+    });
 }
 
 interface QueueCommandInput {

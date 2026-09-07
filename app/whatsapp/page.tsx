@@ -6,7 +6,7 @@ import { collection, doc, getDocs, onSnapshot, query, where } from "firebase/fir
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/context/AuthContext";
 import { Group, getCurrentWeek, PROGRAM_WEEKS } from "@/lib/groups";
-import { WhatsappSession, WhatsappAttachment, requestWhatsappConnection, queueWhatsappCommand, uploadWhatsappAttachment } from "@/lib/whatsapp";
+import { WhatsappSession, WhatsappAttachment, requestWhatsappConnection, queueWhatsappCommand, uploadWhatsappAttachment, previewStorageFile } from "@/lib/whatsapp";
 import WhatsappConnectCard from "@/components/WhatsappConnectCard";
 import LibraryAttachmentModal from "@/components/LibraryAttachmentModal";
 
@@ -313,6 +313,16 @@ export default function WhatsappManagementPage() {
                     {(file || libraryAttachment) && (
                       <span className="text-sm text-gray-500 flex items-center gap-2 min-w-0">
                         <span className="truncate">{file ? file.name : libraryAttachment!.name}</span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (file) window.open(URL.createObjectURL(file), "_blank");
+                            else if (libraryAttachment) previewStorageFile(libraryAttachment.path);
+                          }}
+                          className="text-indigo-500 hover:text-indigo-700 shrink-0 font-semibold"
+                        >
+                          תצוגה מקדימה
+                        </button>
                         <button
                           type="button"
                           onClick={() => { setFile(null); setLibraryAttachment(null); }}
