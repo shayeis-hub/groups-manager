@@ -6,8 +6,9 @@ import { collection, doc, getDocs, onSnapshot, query, where } from "firebase/fir
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/context/AuthContext";
 import { Group, getCurrentWeek, PROGRAM_WEEKS } from "@/lib/groups";
-import { WhatsappSession, requestWhatsappConnection, queueWhatsappCommand, uploadWhatsappAttachment } from "@/lib/whatsapp";
+import { WhatsappSession, WhatsappAttachment, requestWhatsappConnection, queueWhatsappCommand, uploadWhatsappAttachment } from "@/lib/whatsapp";
 import WhatsappConnectCard from "@/components/WhatsappConnectCard";
+import LibraryAttachmentModal from "@/components/LibraryAttachmentModal";
 
 const OPEN_STATE_LABEL: Record<string, string> = {
   open: "כל הקבוצות פתוחות לכתיבה",
@@ -24,6 +25,8 @@ export default function WhatsappManagementPage() {
   const [selectedGroupIds, setSelectedGroupIds] = useState<string[]>([]);
   const [text, setText] = useState("");
   const [file, setFile] = useState<File | null>(null);
+  const [libraryAttachment, setLibraryAttachment] = useState<WhatsappAttachment | null>(null);
+  const [showLibrary, setShowLibrary] = useState(false);
   const [scheduledAt, setScheduledAt] = useState("");
   const [sending, setSending] = useState(false);
   const [feedback, setFeedback] = useState("");
@@ -102,11 +105,13 @@ export default function WhatsappManagementPage() {
   };
 
   const sendMessage = async () => {
-    if (!user || selectedGroups.length === 0 || (!text.trim() && !file)) return;
+    if (!user || selectedGroups.length === 0 || (!text.trim() && !file && !libraryAttachment)) return;
     setSending(true);
     setFeedback("");
     try {
-      const attachment = file ? await uploadWhatsappAttachment(user.uid, file) : undefined;
+      const attachment = file
+        ? await uploadWhatsappAttachment(user.uid, file)
+        : libraryAttachment ?? undefined;
       await Promise.all(
         selectedGroups.flatMap((g) =>
           (g.whatsappGroups ?? []).map((link) =>
@@ -129,6 +134,7 @@ export default function WhatsappManagementPage() {
       );
       setText("");
       setFile(null);
+      setLibraryAttachment(null);
       setScheduledAt("");
       setSelectedGroupIds([]);
     } catch (err) {
@@ -285,19 +291,33 @@ export default function WhatsappManagementPage() {
                     className="border border-gray-200 rounded-xl px-4 py-3 text-gray-800 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent transition placeholder:text-gray-300 resize-none"
                   />
 
-                  <div className="flex items-center gap-3">
+                  <div className="flex flex-wrap items-center gap-3">
                     <label className="text-sm font-semibold text-indigo-600 hover:underline cursor-pointer">
                       {file ? "החלף קובץ" : "צרף קובץ"}
                       <input
                         type="file"
-                        onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+                        onChange={(e) => {
+                          setFile(e.target.files?.[0] ?? null);
+                          setLibraryAttachment(null);
+                        }}
                         className="hidden"
                       />
                     </label>
-                    {file && (
+                    <button
+                      type="button"
+                      onClick={() => setShowLibrary(true)}
+                      className="text-sm font-semibold text-indigo-600 hover:underline"
+                    >
+                      צירוף קובץ מספרייה
+                    </button>
+                    {(file || libraryAttachment) && (
                       <span className="text-sm text-gray-500 flex items-center gap-2 min-w-0">
-                        <span className="truncate">{file.name}</span>
-                        <button type="button" onClick={() => setFile(null)} className="text-gray-400 hover:text-gray-600 shrink-0">
+                        <span className="truncate">{file ? file.name : libraryAttachment!.name}</span>
+                        <button
+                          type="button"
+                          onClick={() => { setFile(null); setLibraryAttachment(null); }}
+                          className="text-gray-400 hover:text-gray-600 shrink-0"
+                        >
                           ✕
                         </button>
                       </span>
@@ -316,7 +336,7 @@ export default function WhatsappManagementPage() {
                     </label>
                     <button
                       onClick={sendMessage}
-                      disabled={sending || selectedGroupIds.length === 0 || (!text.trim() && !file)}
+                      disabled={sending || selectedGroupIds.length === 0 || (!text.trim() && !file && !libraryAttachment)}
                       className="mr-auto bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl px-5 py-2 text-sm transition disabled:opacity-50"
                     >
                       {sending ? "שולח..." : scheduledAt ? "תזמן שליחה" : "שלח עכשיו"}
@@ -384,6 +404,16 @@ export default function WhatsappManagementPage() {
           </>
         )}
       </main>
+
+      {showLibrary && (
+        <LibraryAttachmentModal
+          onClose={() => setShowLibrary(false)}
+          onSelect={(attachment) => {
+            setLibraryAttachment(attachment);
+            setFile(null);
+          }}
+        />
+      )}
     </div>
   );
 }
