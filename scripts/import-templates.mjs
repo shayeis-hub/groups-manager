@@ -16,7 +16,9 @@ import { readdirSync, statSync } from "fs";
 import { join } from "path";
 import { fileURLToPath } from "url";
 import { dirname } from "path";
-import admin from "firebase-admin";
+import { initializeApp, cert } from "firebase-admin/app";
+import { getFirestore } from "firebase-admin/firestore";
+import { getStorage } from "firebase-admin/storage";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -36,13 +38,13 @@ const serviceAccount = JSON.parse(
   )
 );
 
-admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount),
+const app = initializeApp({
+  credential: cert(serviceAccount),
   storageBucket: "group-manager-631d1.firebasestorage.app",
 });
 
-const db = admin.firestore();
-const bucket = admin.storage().bucket();
+const db = getFirestore(app);
+const bucket = getStorage(app).bucket();
 
 // Parses "בסיס - שבוע 3 - פתיחה.mp4" / "שבוע 5- סיום.mp4" / "שבוע 3 פתיחה.mp4"
 // into { week: 3, kind: "פתיחה" }. Tolerant of missing/odd spacing around
