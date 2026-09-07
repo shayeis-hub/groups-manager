@@ -24,6 +24,7 @@ export default function TemplatesPage() {
   const [showAddFor, setShowAddFor] = useState<string | null>(null); // setId
   const [showAddNew, setShowAddNew] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [openSetIds, setOpenSetIds] = useState<Set<string>>(new Set());
 
   const [applyGroupId, setApplyGroupId] = useState("");
   const [applySetId, setApplySetId] = useState("");
@@ -69,6 +70,15 @@ export default function TemplatesPage() {
   }, [user]);
 
   const templatesBySet = (setId: string) => (templates ?? []).filter((t) => t.setId === setId);
+
+  const toggleSetOpen = (setId: string) => {
+    setOpenSetIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(setId)) next.delete(setId);
+      else next.add(setId);
+      return next;
+    });
+  };
 
   const applyGroup = groups.find((g) => g.id === applyGroupId);
   const setsForApplyGroup = applyGroup ? (sets ?? []).filter((s) => s.program === applyGroup.program) : [];
@@ -228,13 +238,29 @@ export default function TemplatesPage() {
             <div className="flex flex-col gap-5">
               {sets.map((s) => {
                 const setTemplates = templatesBySet(s.id);
+                const isOpen = openSetIds.has(s.id);
                 return (
                   <div key={s.id} className="flex flex-col gap-2">
                     <div className="flex items-center justify-between">
-                      <h3 className="text-sm font-bold text-gray-600">{s.name} <span className="text-gray-400 font-normal">({s.program})</span></h3>
+                      <button
+                        onClick={() => toggleSetOpen(s.id)}
+                        className="flex items-center gap-2 text-sm font-bold text-gray-600 hover:text-gray-800 transition"
+                      >
+                        <svg
+                          className={`w-4 h-4 text-gray-400 transition-transform duration-200 shrink-0 ${isOpen ? "rotate-180" : ""}`}
+                          fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
+                        >
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                        </svg>
+                        {s.name} <span className="text-gray-400 font-normal">({s.program})</span>
+                        <span className="text-gray-400 font-normal">· {setTemplates.length}</span>
+                      </button>
                       <div className="flex items-center gap-3">
                         <button
-                          onClick={() => setShowAddFor(showAddFor === s.id ? null : s.id)}
+                          onClick={() => {
+                            setShowAddFor(showAddFor === s.id ? null : s.id);
+                            setOpenSetIds((prev) => new Set(prev).add(s.id));
+                          }}
                           className="text-xs font-semibold text-indigo-600 hover:underline"
                         >
                           {showAddFor === s.id ? "ביטול" : "+ הוסף הודעה"}
@@ -259,7 +285,7 @@ export default function TemplatesPage() {
                       <TemplateForm defaultSetId={s.id} onDone={() => setShowAddFor(null)} onCancel={() => setShowAddFor(null)} />
                     )}
 
-                    {setTemplates.length === 0 ? (
+                    {!isOpen ? null : setTemplates.length === 0 ? (
                       <p className="text-xs text-gray-400">אין עדיין הודעות בקבוצת שליחה זו</p>
                     ) : (
                       setTemplates.map((t) =>
