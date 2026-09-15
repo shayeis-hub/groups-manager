@@ -27,6 +27,7 @@ export default function SessionsOverviewPage() {
   const { user, loading } = useAuth();
   const [rows, setRows] = useState<Row[] | null>(null);
   const [openGroupIds, setOpenGroupIds] = useState<Set<string>>(new Set());
+  const [search, setSearch] = useState("");
 
   useEffect(() => {
     if (!user) return;
@@ -88,6 +89,25 @@ export default function SessionsOverviewPage() {
       .sort((a, b) => b.group.startDate.localeCompare(a.group.startDate)); // newest cycle first
   }, [rows]);
 
+  const isSearching = search.trim().length > 0;
+
+  const filteredSections = useMemo(() => {
+    const term = search.trim().toLowerCase();
+    if (!term) return sections;
+
+    return sections
+      .map(({ group, rows: groupRows }) => {
+        const groupMatches = `${group.program} ${group.name}`.toLowerCase().includes(term);
+        if (groupMatches) return { group, rows: groupRows };
+
+        const matchingRows = groupRows.filter((r) => r.client.name.toLowerCase().includes(term));
+        if (matchingRows.length > 0) return { group, rows: matchingRows };
+
+        return null;
+      })
+      .filter((s): s is GroupSection => s !== null);
+  }, [sections, search]);
+
   const toggleGroup = (groupId: string) => {
     setOpenGroupIds((prev) => {
       const next = new Set(prev);
@@ -125,16 +145,28 @@ export default function SessionsOverviewPage() {
       </header>
 
       <main className="max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+        {rows !== null && rows.length > 0 && (
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="חיפוש לפי שם לקוח, או תוכנית..."
+            className="w-full border-2 border-gray-200 rounded-xl px-5 py-4 text-lg font-semibold text-gray-800 bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent transition placeholder:text-gray-400 placeholder:font-normal mb-6"
+          />
+        )}
+
         {rows === null ? (
           <div className="flex justify-center py-20">
             <div className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin" />
           </div>
         ) : rows.length === 0 ? (
           <p className="text-gray-400 text-sm text-center py-20">אין לקוחות ליווי בקבוצות פעילות כרגע</p>
+        ) : filteredSections.length === 0 ? (
+          <p className="text-gray-400 text-sm text-center py-20">אין תוצאות תואמות</p>
         ) : (
           <div className="flex flex-col gap-3">
-            {sections.map(({ group, rows: groupRows }) => {
-              const isOpen = openGroupIds.has(group.id);
+            {filteredSections.map(({ group, rows: groupRows }) => {
+              const isOpen = isSearching || openGroupIds.has(group.id);
               return (
                 <div key={group.id} className="rounded-2xl border border-gray-100 overflow-hidden bg-white shadow-sm">
                   <button
