@@ -27,6 +27,7 @@ export default function WhatsappManagementPage() {
   const [file, setFile] = useState<File | null>(null);
   const [libraryAttachment, setLibraryAttachment] = useState<WhatsappAttachment | null>(null);
   const [showLibrary, setShowLibrary] = useState(false);
+  const [pinMessage, setPinMessage] = useState(false);
   const [scheduledAt, setScheduledAt] = useState("");
   const [sending, setSending] = useState(false);
   const [feedback, setFeedback] = useState("");
@@ -134,6 +135,7 @@ export default function WhatsappManagementPage() {
               type: "send",
               text: text.trim() || undefined,
               attachment,
+              pin: pinMessage,
               scheduledFor: scheduledAt ? new Date(scheduledAt) : undefined,
             })
           )
@@ -147,6 +149,7 @@ export default function WhatsappManagementPage() {
       setText("");
       setFile(null);
       setLibraryAttachment(null);
+      setPinMessage(false);
       setScheduledAt("");
       setSelectedGroupIds([]);
     } catch (err) {
@@ -347,6 +350,15 @@ export default function WhatsappManagementPage() {
                       </span>
                     )}
                   </div>
+
+                  <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer select-none w-fit">
+                    <input
+                      type="checkbox"
+                      checked={pinMessage}
+                      onChange={(e) => setPinMessage(e.target.checked)}
+                    />
+                    נעץ את ההודעה בצ&apos;אט
+                  </label>
 
                   <div className="flex flex-wrap items-center gap-3">
                     <label className="text-sm text-gray-500 flex items-center gap-2">

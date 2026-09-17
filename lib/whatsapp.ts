@@ -42,6 +42,7 @@ export interface WhatsappCommand {
   type: WhatsappCommandType;
   text?: string;
   attachment?: WhatsappAttachment;
+  pin?: boolean; // pin the sent message in the chat (type "send" only)
   scheduledFor?: Timestamp;
   status: WhatsappCommandStatus;
   error?: string;
@@ -85,12 +86,13 @@ interface QueueCommandInput {
   type: WhatsappCommandType;
   text?: string;
   attachment?: WhatsappAttachment;
+  pin?: boolean;
   scheduledFor?: Date;
 }
 
 // Writes a command doc; the local WhatsApp bridge service (running
 // separately, listening on this collection) picks it up and executes it.
-export async function queueWhatsappCommand({ uid, waGroupId, appGroupId, type, text, attachment, scheduledFor }: QueueCommandInput) {
+export async function queueWhatsappCommand({ uid, waGroupId, appGroupId, type, text, attachment, pin, scheduledFor }: QueueCommandInput) {
   await addDoc(collection(db, "whatsappCommands"), {
     uid,
     waGroupId,
@@ -98,6 +100,7 @@ export async function queueWhatsappCommand({ uid, waGroupId, appGroupId, type, t
     type,
     ...(text ? { text } : {}),
     ...(attachment ? { attachment } : {}),
+    ...(pin ? { pin: true } : {}),
     ...(scheduledFor ? { scheduledFor: Timestamp.fromDate(scheduledFor) } : {}),
     status: "pending",
     createdAt: serverTimestamp(),
