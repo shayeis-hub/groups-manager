@@ -11,10 +11,10 @@ import WhatsappConnectCard from "@/components/WhatsappConnectCard";
 import LibraryAttachmentModal from "@/components/LibraryAttachmentModal";
 
 const OPEN_STATE_LABEL: Record<string, string> = {
-  open: "כל הקבוצות פתוחות לכתיבה",
-  closed: "כל הקבוצות סגורות (רק אדמינים)",
+  open: "כל הקבוצות הפעילות פתוחות לכתיבה",
+  closed: "כל הקבוצות הפעילות סגורות (רק אדמינים)",
   mixed: "חלק פתוחות, חלק סגורות",
-  none: "אין עדיין קבוצות מקושרות",
+  none: "אין כרגע קבוצות פעילות מקושרות",
 };
 
 export default function WhatsappManagementPage() {
@@ -62,20 +62,26 @@ export default function WhatsappManagementPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
+  // Bulk open/close, sending, and the "current status" summary all only
+  // make sense for groups still in their active week range — a finished
+  // cycle shouldn't be touched or counted by any of them.
+  const activeGroups = groups.filter((g) => isGroupActive(g.startDate, g.program));
+
   const openState = useMemo(() => {
-    if (groups.length === 0) return "none";
-    const states = groups.map((g) => g.whatsappOpen);
+    if (activeGroups.length === 0) return "none";
+    const states = activeGroups.map((g) => g.whatsappOpen);
     if (states.every((s) => s === true)) return "open";
     if (states.every((s) => s === false)) return "closed";
     return "mixed";
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [groups]);
 
   const runBulk = async (type: "open" | "close") => {
-    if (!user || groups.length === 0) return;
+    if (!user || activeGroups.length === 0) return;
     setBulkBusy(type);
     try {
       await Promise.all(
-        groups.flatMap((g) =>
+        activeGroups.flatMap((g) =>
           (g.whatsappGroups ?? []).map((link) =>
             queueWhatsappCommand({ uid: user.uid, waGroupId: link.id, appGroupId: g.id, type })
           )
@@ -85,10 +91,6 @@ export default function WhatsappManagementPage() {
       setBulkBusy(null);
     }
   };
-
-  // Sending only makes sense for groups still in their active week range —
-  // a finished cycle shouldn't show up here at all.
-  const activeGroups = groups.filter((g) => isGroupActive(g.startDate, g.program));
 
   // Closing is the inverse: only cycles that already ran their full week
   // range are candidates, longest-finished first (closure normally happens
@@ -232,19 +234,19 @@ export default function WhatsappManagementPage() {
         {session?.status === "connected" && (
           <>
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 px-5 py-4 sm:px-8 sm:py-5 flex flex-col gap-3" dir="rtl">
-              <h2 className="text-lg font-bold text-gray-800">כל הקבוצות</h2>
+              <h2 className="text-lg font-bold text-gray-800">כל הקבוצות הפעילות</h2>
               <p className="text-sm text-gray-400">{OPEN_STATE_LABEL[openState]}</p>
               <div className="flex gap-3">
                 <button
                   onClick={() => runBulk("open")}
-                  disabled={bulkBusy !== null || groups.length === 0}
+                  disabled={bulkBusy !== null || activeGroups.length === 0}
                   className="flex-1 bg-green-50 hover:bg-green-100 text-green-700 font-semibold rounded-xl py-2.5 text-sm transition disabled:opacity-50"
                 >
                   {bulkBusy === "open" ? "פותח..." : "פתח את כל הקבוצות"}
                 </button>
                 <button
                   onClick={() => runBulk("close")}
-                  disabled={bulkBusy !== null || groups.length === 0}
+                  disabled={bulkBusy !== null || activeGroups.length === 0}
                   className="flex-1 bg-red-50 hover:bg-red-100 text-red-700 font-semibold rounded-xl py-2.5 text-sm transition disabled:opacity-50"
                 >
                   {bulkBusy === "close" ? "סוגר..." : "סגור את כל הקבוצות"}
