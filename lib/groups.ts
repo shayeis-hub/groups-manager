@@ -91,6 +91,27 @@ export function canAssignClients(startDate: string, program: Program): boolean {
   return isGroupActive(startDate, program) || isGroupUpcoming(startDate);
 }
 
+// Cycle that already ran and completed its full week range (as opposed to
+// one that just hasn't started yet — isGroupActive is false for both, but
+// only a finished one is a candidate for closing).
+export function isGroupFinished(startDate: string, program: Program): boolean {
+  return !isGroupActive(startDate, program) && !isGroupUpcoming(startDate);
+}
+
+// Days since a finished group actually stopped being "current week N" (the
+// Sunday right after its last active week) — null while still active or not
+// yet started. Closing normally happens a week after this point, so this is
+// what drives the "X ימים" note on the close-group picker.
+export function daysSinceProgramEnded(startDate: string, program: Program): number | null {
+  if (!isGroupFinished(startDate, program)) return null;
+  const startSunday = getSunday(new Date(startDate + "T00:00:00"));
+  const endSunday = new Date(startSunday);
+  endSunday.setDate(endSunday.getDate() + PROGRAM_WEEKS[program] * 7);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return Math.floor((today.getTime() - endSunday.getTime()) / (24 * 60 * 60 * 1000));
+}
+
 // Inverse of getWeekForDate: the calendar date for a given program-week +
 // weekday (0=Sunday..6=Saturday), relative to a group's start date. Used to
 // schedule a whole template library against one group's actual calendar.

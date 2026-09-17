@@ -5,7 +5,7 @@ import Link from "next/link";
 import { collection, doc, getDocs, onSnapshot, query, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/context/AuthContext";
-import { Group, getCurrentWeek, PROGRAM_WEEKS } from "@/lib/groups";
+import { Group, getCurrentWeek, PROGRAM_WEEKS, isGroupActive, isGroupFinished, daysSinceProgramEnded } from "@/lib/groups";
 import { WhatsappSession, WhatsappAttachment, requestWhatsappConnection, queueWhatsappCommand, uploadWhatsappAttachment, previewStorageFile } from "@/lib/whatsapp";
 import WhatsappConnectCard from "@/components/WhatsappConnectCard";
 import LibraryAttachmentModal from "@/components/LibraryAttachmentModal";
@@ -86,9 +86,19 @@ export default function WhatsappManagementPage() {
     }
   };
 
-  // Newest cycle (lowest current week) first; inactive groups (no current
-  // week) sort last.
-  const composerGroups = [...groups].sort(
+  // Sending only makes sense for groups still in their active week range —
+  // a finished cycle shouldn't show up here at all.
+  const activeGroups = groups.filter((g) => isGroupActive(g.startDate, g.program));
+
+  // Closing is the inverse: only cycles that already ran their full week
+  // range are candidates, longest-finished first (closure normally happens
+  // a week after the cycle ends, so the oldest ones are the most overdue).
+  const finishedGroups = [...groups]
+    .filter((g) => isGroupFinished(g.startDate, g.program))
+    .sort((a, b) => (daysSinceProgramEnded(b.startDate, b.program) ?? 0) - (daysSinceProgramEnded(a.startDate, a.program) ?? 0));
+
+  // Newest cycle (lowest current week) first.
+  const composerGroups = [...activeGroups].sort(
     (a, b) =>
       (getCurrentWeek(a.startDate, a.program) ?? Infinity) - (getCurrentWeek(b.startDate, b.program) ?? Infinity)
   );
@@ -247,9 +257,11 @@ export default function WhatsappManagementPage() {
 
               {fetchingGroups ? (
                 <p className="text-sm text-gray-400">טוען קבוצות...</p>
-              ) : groups.length === 0 ? (
+              ) : activeGroups.length === 0 ? (
                 <p className="text-sm text-gray-400">
-                  אין עדיין קבוצות מקושרות לוואטסאפ. ניתן לקשר קבוצה דרך עריכת קבוצה בעמוד הראשי.
+                  {groups.length === 0
+                    ? "אין עדיין קבוצות מקושרות לוואטסאפ. ניתן לקשר קבוצה דרך עריכת קבוצה בעמוד הראשי."
+                    : "אין קבוצות פעילות כרגע לשליחת הודעות אליהן."}
                 </p>
               ) : (
                 <>
@@ -366,8 +378,8 @@ export default function WhatsappManagementPage() {
                 </p>
               </div>
 
-              {groups.length === 0 ? (
-                <p className="text-sm text-gray-400">אין קבוצות פעילות מקושרות לסגור.</p>
+              {finishedGroups.length === 0 ? (
+                <p className="text-sm text-gray-400">אין קבוצות שסיימו ומחכות לסגירה.</p>
               ) : (
                 <>
                   <div className="flex flex-col gap-1.5">
@@ -378,12 +390,11 @@ export default function WhatsappManagementPage() {
                       className="border border-gray-200 rounded-xl px-4 py-3 text-gray-800 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent transition"
                     >
                       <option value="">בחר קבוצה...</option>
-                      {groups.map((g) => {
-                        const week = getCurrentWeek(g.startDate, g.program);
-                        const total = PROGRAM_WEEKS[g.program];
+                      {finishedGroups.map((g) => {
+                        const days = daysSinceProgramEnded(g.startDate, g.program);
                         return (
                           <option key={g.id} value={g.id}>
-                            {g.program} · {g.name} · {week ? `שבוע ${week}/${total}` : "לא פעיל"}
+                            {g.program} · {g.name} · הסתיימה לפני {days} ימים
                             {(g.whatsappGroups?.length ?? 0) > 1 ? ` (${g.whatsappGroups!.length} קבוצות)` : ""}
                           </option>
                         );
