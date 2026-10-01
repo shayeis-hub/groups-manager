@@ -11,6 +11,7 @@ import { useAuth } from "@/context/AuthContext";
 import { Group, getCurrentWeek, PROGRAM_WEEKS } from "@/lib/groups";
 import { Client, Session, SessionKind, SESSION_LABELS } from "@/lib/clients";
 import { isDietitianEmail, dietitianNameByEmail } from "@/lib/dietitians";
+import ClientWhatsappCard from "@/components/ClientWhatsappCard";
 
 const KINDS: SessionKind[] = ["dietitianSessions", "coachSessions"];
 
@@ -232,6 +233,13 @@ export default function ClientPage() {
       </header>
 
       <main className="max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-8 flex flex-col gap-4">
+        {!isDietitian && (
+          <ClientWhatsappCard
+            client={client}
+            onPhoneSaved={(phone) => setClient((c) => (c ? { ...c, phone } : c))}
+          />
+        )}
+
         {KINDS.map((kind) => (
           <section key={kind} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 sm:p-6">
             <div className="flex items-center justify-between gap-3 mb-4">

@@ -23,6 +23,7 @@ export default function AddClientModal({ groups, onClose, onAdded }: Props) {
   const [groupId, setGroupId] = useState(groups[0]?.id ?? "");
   const [name, setName] = useState("");
   const [portalUrl, setPortalUrl] = useState("");
+  const [phone, setPhone] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -36,6 +37,7 @@ export default function AddClientModal({ groups, onClose, onAdded }: Props) {
         name: name.trim(),
         groupId,
         portalUrl: portalUrl.trim(),
+        ...(phone.trim() ? { phone: phone.trim() } : {}),
         createdAt: Date.now(),
         userId: user.uid,
       });
@@ -90,6 +92,18 @@ export default function AddClientModal({ groups, onClose, onAdded }: Props) {
               value={portalUrl}
               onChange={(e) => setPortalUrl(e.target.value)}
               placeholder="https://..."
+              dir="ltr"
+              className="border border-gray-200 rounded-xl px-4 py-3 text-gray-800 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent transition placeholder:text-gray-300"
+            />
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <label className="text-sm font-medium text-gray-600">טלפון לוואטסאפ (אופציונלי)</label>
+            <input
+              type="tel"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              placeholder="050-1234567"
               dir="ltr"
               className="border border-gray-200 rounded-xl px-4 py-3 text-gray-800 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent transition placeholder:text-gray-300"
             />

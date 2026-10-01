@@ -90,8 +90,8 @@ interface QueueCommandInput {
 
 // Writes a command doc; the local WhatsApp bridge service (running
 // separately, listening on this collection) picks it up and executes it.
-export async function queueWhatsappCommand({ uid, waGroupId, appGroupId, type, text, attachment, scheduledFor }: QueueCommandInput) {
-  await addDoc(collection(db, "whatsappCommands"), {
+export async function queueWhatsappCommand({ uid, waGroupId, appGroupId, type, text, attachment, scheduledFor }: QueueCommandInput): Promise<string> {
+  const ref = await addDoc(collection(db, "whatsappCommands"), {
     uid,
     waGroupId,
     ...(appGroupId ? { appGroupId } : {}),
@@ -102,6 +102,20 @@ export async function queueWhatsappCommand({ uid, waGroupId, appGroupId, type, t
     status: "pending",
     createdAt: serverTimestamp(),
   });
+  return ref.id;
+}
+
+// Turns a phone number as typed by a person ("050-123-4567", "+972 50 123 4567",
+// "972501234567") into the WhatsApp JID the bridge sends to. Israeli local
+// numbers (leading 0) get the 972 country code; anything already carrying a
+// country code is kept as-is. Returns null when it doesn't look like a real
+// number so the UI can refuse instead of queueing a command that can't work.
+export function phoneToJid(phone: string): string | null {
+  let digits = phone.replace(/\D/g, "");
+  if (digits.startsWith("00")) digits = digits.slice(2);
+  else if (digits.startsWith("0")) digits = "972" + digits.slice(1);
+  if (digits.length < 10 || digits.length > 15) return null;
+  return `${digits}@s.whatsapp.net`;
 }
 
 export async function updateScheduledMessage(commandId: string, text: string, scheduledFor: Date | null) {

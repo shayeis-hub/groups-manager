@@ -6,6 +6,7 @@ export interface Client {
   createdAt: number;
   userId: string;
   openingQuestionnaire?: boolean; // whether the client filled the intake questionnaire
+  phone?: string; // as typed by the coach; normalized to a WhatsApp JID only at send time
 }
 
 export interface Session {
