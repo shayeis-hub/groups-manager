@@ -7,6 +7,7 @@ import { db } from "@/lib/firebase";
 import { useAuth } from "@/context/AuthContext";
 import { Group, isGroupActive, getCurrentWeek, getWeekForDate } from "@/lib/groups";
 import { Client, SessionKind } from "@/lib/clients";
+import { phoneToJid } from "@/lib/whatsapp";
 
 const KINDS: SessionKind[] = ["coachSessions", "dietitianSessions"];
 
@@ -16,6 +17,20 @@ interface Row {
   currentWeek: number;
   lastCoachWeek: number | null;
   lastDietitianWeek: number | null;
+  // Latest personal WhatsApp actually delivered to the client; null = never,
+  // undefined = couldn't be looked up (line is hidden rather than guessed).
+  lastWhatsapp: { date: Date; week: number } | null | undefined;
+}
+
+// "05/10/26" — matches the date style the coach asked for.
+function formatShortDate(d: Date): string {
+  const dd = String(d.getDate()).padStart(2, "0");
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  return `${dd}/${mm}/${String(d.getFullYear()).slice(2)}`;
+}
+
+function toISODate(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
 interface GroupSection {
@@ -51,6 +66,48 @@ export default function SessionsOverviewPage() {
         return getWeekForDate(group.startDate, snap.docs[0].data().date as string);
       };
 
+      // When each client's number last received a delivered personal
+      // message. Read from the bridge's own command log (status "done")
+      // rather than a flag the app sets, so a message that was queued while
+      // the bridge was down — or failed — doesn't count as sent.
+      let lastWhatsappByJid: Map<string, Date> | null = new Map();
+      try {
+        const jids = Array.from(
+          new Set(
+            clients
+              .map((c) => (c.phone ? phoneToJid(c.phone) : null))
+              .filter((j): j is string => !!j)
+          )
+        );
+        const chunks: string[][] = [];
+        for (let i = 0; i < jids.length; i += 30) chunks.push(jids.slice(i, i + 30)); // Firestore "in" limit
+        const snaps = await Promise.all(
+          chunks.map((chunk) =>
+            getDocs(
+              query(
+                collection(db, "whatsappCommands"),
+                where("uid", "==", user.uid),
+                where("type", "==", "send"),
+                where("status", "==", "done"),
+                where("waGroupId", "in", chunk)
+              )
+            )
+          )
+        );
+        for (const snap of snaps) {
+          for (const d of snap.docs) {
+            const data = d.data();
+            const when: Date | undefined = (data.completedAt ?? data.createdAt)?.toDate?.();
+            if (!when) continue;
+            const prev = lastWhatsappByJid.get(data.waGroupId);
+            if (!prev || when > prev) lastWhatsappByJid.set(data.waGroupId, when);
+          }
+        }
+      } catch (err) {
+        console.error("whatsapp history lookup failed:", err);
+        lastWhatsappByJid = null;
+      }
+
       const built = (
         await Promise.all(
           clients.map(async (client) => {
@@ -62,7 +119,16 @@ export default function SessionsOverviewPage() {
             ]);
             const currentWeek = getCurrentWeek(group.startDate, group.program);
             if (currentWeek === null) return null;
-            return { client, group, currentWeek, lastCoachWeek, lastDietitianWeek };
+
+            let lastWhatsapp: Row["lastWhatsapp"];
+            if (lastWhatsappByJid === null) {
+              lastWhatsapp = undefined;
+            } else {
+              const jid = client.phone ? phoneToJid(client.phone) : null;
+              const date = jid ? lastWhatsappByJid.get(jid) : undefined;
+              lastWhatsapp = date ? { date, week: getWeekForDate(group.startDate, toISODate(date)) } : null;
+            }
+            return { client, group, currentWeek, lastCoachWeek, lastDietitianWeek, lastWhatsapp };
           })
         )
       ).filter((r): r is Row => r !== null)
@@ -188,7 +254,7 @@ export default function SessionsOverviewPage() {
 
                   {isOpen && (
                     <div className="flex flex-col gap-3 px-3 sm:px-4 pb-4 pt-1">
-                      {groupRows.map(({ client, currentWeek, lastCoachWeek, lastDietitianWeek }) => (
+                      {groupRows.map(({ client, currentWeek, lastCoachWeek, lastDietitianWeek, lastWhatsapp }) => (
                         <div
                           key={client.id}
                           className="bg-white rounded-2xl border border-gray-100 hover:shadow-md transition-shadow"
@@ -212,6 +278,13 @@ export default function SessionsOverviewPage() {
                                   ? "אין עדיין שיחה עם תזונאית"
                                   : <>שיחה אחרונה עם תזונאית בוצעה בשבוע: <span className="font-semibold text-gray-800">{lastDietitianWeek}</span></>}
                               </p>
+                              {lastWhatsapp !== undefined && (
+                                <p className={lastWhatsapp === null ? "text-red-500" : "text-gray-600"}>
+                                  {lastWhatsapp === null
+                                    ? "לא נשלח וואטסאפ אישי"
+                                    : <>נשלחה הודעת וואטסאפ בתאריך: <span className="font-semibold text-gray-800">{formatShortDate(lastWhatsapp.date)}</span> · שבוע בתוכנית: <span className="font-semibold text-gray-800">{lastWhatsapp.week}</span></>}
+                                </p>
+                              )}
                             </div>
                           </Link>
                           {client.portalUrl && (
