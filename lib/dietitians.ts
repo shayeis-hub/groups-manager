@@ -11,7 +11,6 @@ export interface Dietitian {
 
 export const DIETITIANS: Dietitian[] = [
   { name: "גלית", email: "galit.g@leptin4life.com" },
-  { name: "רותם", email: "rotem.st@leptin4life.com" },
   { name: "שי", email: "shayeis@gmail.com" },
 ];
 
