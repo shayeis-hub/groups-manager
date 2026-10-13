@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { collection, query, where, getDocs } from "firebase/firestore";
+import { collection, query, where, getDocs, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/context/AuthContext";
 import { Group, isGroupActive, isGroupUpcoming, canAssignClients, getCurrentWeek, PROGRAMS, Program } from "@/lib/groups";
@@ -12,6 +12,8 @@ import AddClientModal from "@/components/AddClientModal";
 import ProgramSection from "@/components/ProgramSection";
 import GroupCard from "@/components/GroupCard";
 import DietitianSearch from "@/components/DietitianSearch";
+import NotificationsModal from "@/components/NotificationsModal";
+import { AppNotification } from "@/lib/notifications";
 
 const PROGRAM_COLORS: Record<Program, string> = {
   Start:          "text-sky-700",
@@ -34,6 +36,8 @@ export default function Home() {
   const [showModal, setShowModal] = useState(false);
   const [showClientModal, setShowClientModal] = useState(false);
   const [showEnded, setShowEnded] = useState(false);
+  const [notifications, setNotifications] = useState<AppNotification[]>([]);
+  const [showNotifications, setShowNotifications] = useState(false);
 
   const fetchGroups = async () => {
     if (!user || isDietitian) return;
@@ -85,7 +89,29 @@ export default function Home() {
     else setGroups([]);
   }, [user, isDietitian]);
 
-  const grouped = PROGRAMS.reduce<Record<Program, Group[]>>((acc, p) => {
+  // Unread heads-ups (e.g. a dietitian logged a conversation), live so the
+  // badge updates without a refresh. The ownerUid filter is what the security
+  // rule needs in order to allow the query at all.
+  useEffect(() => {
+    if (!user || isDietitian) return;
+    const q = query(
+      collection(db, "notifications"),
+      where("ownerUid", "==", user.uid),
+      where("read", "==", false)
+    );
+    return onSnapshot(
+      q,
+      (snap) =>
+        setNotifications(
+          snap.docs
+            .map((d) => ({ id: d.id, ...d.data() } as AppNotification))
+            .sort((a, b) => b.createdAt - a.createdAt)
+        ),
+      (err) => console.error("notifications subscription error:", err)
+    );
+  }, [user, isDietitian]);
+
+  const grouped =PROGRAMS.reduce<Record<Program, Group[]>>((acc, p) => {
     acc[p] = groups.filter((g) => g.program === p);
     return acc;
   }, {} as Record<Program, Group[]>);
@@ -147,6 +173,17 @@ export default function Home() {
             {groups.length === 0 ? "אין קבוצות פעילות" : `${groups.length} קבוצות פעילות`}
           </p>
           <div className="flex items-center gap-3">
+            <button
+              onClick={() => setShowNotifications(true)}
+              className="relative flex-1 sm:flex-none justify-center bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 font-semibold px-4 sm:px-6 py-3 rounded-xl transition flex items-center gap-2 shadow-sm whitespace-nowrap"
+            >
+              התראות
+              {notifications.length > 0 && (
+                <span className="bg-red-500 text-white text-xs font-bold rounded-full min-w-[20px] h-5 px-1.5 flex items-center justify-center">
+                  {notifications.length}
+                </span>
+              )}
+            </button>
             <button
               onClick={() => setShowClientModal(true)}
               disabled={assignableGroups.length === 0}
@@ -245,6 +282,10 @@ export default function Home() {
 
       {showModal && (
         <AddGroupModal onClose={() => setShowModal(false)} onAdded={fetchGroups} />
+      )}
+
+      {showNotifications && (
+        <NotificationsModal notifications={notifications} onClose={() => setShowNotifications(false)} />
       )}
 
       {showClientModal && (

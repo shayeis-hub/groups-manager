@@ -12,6 +12,7 @@ import { Group, getCurrentWeek, PROGRAM_WEEKS } from "@/lib/groups";
 import { Client, Session, SessionKind, SESSION_LABELS } from "@/lib/clients";
 import { isDietitianEmail, dietitianNameByEmail } from "@/lib/dietitians";
 import ClientWhatsappCard from "@/components/ClientWhatsappCard";
+import { notifyDietitianSession } from "@/lib/notifications";
 
 const KINDS: SessionKind[] = ["dietitianSessions", "coachSessions"];
 
@@ -90,6 +91,21 @@ export default function ClientPage() {
         createdAt: Date.now(),
         ...(authorName ? { authorName } : {}),
       });
+      // Let the coach know — otherwise a dietitian's entry sits unseen unless
+      // he goes looking. Best-effort: the session itself is already saved.
+      if (isDietitian && composing === "dietitianSessions" && client) {
+        try {
+          await notifyDietitianSession({
+            ownerUid: client.userId,
+            clientId: client.id,
+            clientName: client.name,
+            authorName: authorName ?? "תזונאית",
+            sessionDate: draftDate,
+          });
+        } catch (err) {
+          console.error("notify coach failed:", err);
+        }
+      }
       setComposing(null);
       setExpandedId(ref.id);
       await fetchAll();

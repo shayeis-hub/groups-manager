@@ -36,6 +36,16 @@ service cloud.firestore {
       allow read, write: if request.auth != null && request.auth.uid == uid;
     }
 
+    // Heads-ups for the coach about what a dietitian did (e.g. logged a
+    // conversation). Dietitians may only create them (unread); only the coach
+    // they're addressed to can read, mark read, or delete them.
+    match /notifications/{notificationId} {
+      allow create: if request.auth != null
+        && isDietitian()
+        && request.resource.data.read == false;
+      allow read, update, delete: if request.auth != null && request.auth.uid == resource.data.ownerUid;
+    }
+
     // Reusable message+attachment library, applied in bulk to a group to
     // pre-schedule a whole program's worth of sends. Each coach's own —
     // scoped by uid.
