@@ -7,6 +7,7 @@ import {
   setDoc,
   serverTimestamp,
   Timestamp,
+  writeBatch,
 } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { db, storage } from "@/lib/firebase";
@@ -131,4 +132,16 @@ export async function updateScheduledMessage(commandId: string, text: string, sc
 // row's deletion doesn't mean no sibling command still needs that file.
 export async function deleteScheduledMessage(commandId: string) {
   await deleteDoc(doc(db, "whatsappCommands", commandId));
+}
+
+// Cancels many scheduled sends at once (e.g. a whole group's worth applied
+// from a template set). Chunked to stay well under Firestore's batch limit.
+// The security rules only allow deleting a command while it's still
+// 'pending', so a message the bridge already picked up makes its batch fail.
+export async function deleteScheduledMessages(commandIds: string[]) {
+  for (let i = 0; i < commandIds.length; i += 400) {
+    const batch = writeBatch(db);
+    commandIds.slice(i, i + 400).forEach((id) => batch.delete(doc(db, "whatsappCommands", id)));
+    await batch.commit();
+  }
 }

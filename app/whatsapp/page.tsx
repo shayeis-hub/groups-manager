@@ -6,7 +6,8 @@ import { collection, doc, getDocs, onSnapshot, query, where } from "firebase/fir
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/context/AuthContext";
 import { Group, getCurrentWeek, PROGRAM_WEEKS, isGroupActive, isGroupFinished, daysSinceProgramEnded } from "@/lib/groups";
-import { WhatsappSession, WhatsappAttachment, requestWhatsappConnection, queueWhatsappCommand, uploadWhatsappAttachment, previewStorageFile } from "@/lib/whatsapp";
+import ScheduledMessagesModal from "@/components/ScheduledMessagesModal";
+import { WhatsappCommand, WhatsappSession, WhatsappAttachment, requestWhatsappConnection, queueWhatsappCommand, uploadWhatsappAttachment, previewStorageFile } from "@/lib/whatsapp";
 import WhatsappConnectCard from "@/components/WhatsappConnectCard";
 import LibraryAttachmentModal from "@/components/LibraryAttachmentModal";
 
@@ -27,6 +28,8 @@ export default function WhatsappManagementPage() {
   const [file, setFile] = useState<File | null>(null);
   const [libraryAttachment, setLibraryAttachment] = useState<WhatsappAttachment | null>(null);
   const [showLibrary, setShowLibrary] = useState(false);
+  const [scheduled, setScheduled] = useState<WhatsappCommand[]>([]);
+  const [showScheduled, setShowScheduled] = useState(false);
   const [scheduledAt, setScheduledAt] = useState("");
   const [sending, setSending] = useState(false);
   const [feedback, setFeedback] = useState("");
@@ -39,6 +42,30 @@ export default function WhatsappManagementPage() {
   useEffect(() => {
     if (!user) return;
     return onSnapshot(doc(db, "whatsappSessions", user.uid), (snap) => setSession(snap.data() ?? {}));
+  }, [user]);
+
+  // Every send still waiting its turn that has a scheduled time. Kept live so
+  // the count on the button and the list stay current as the bridge sends
+  // them or as cancellations land.
+  useEffect(() => {
+    if (!user) return;
+    const q = query(
+      collection(db, "whatsappCommands"),
+      where("uid", "==", user.uid),
+      where("type", "==", "send"),
+      where("status", "==", "pending")
+    );
+    return onSnapshot(
+      q,
+      (snap) =>
+        setScheduled(
+          snap.docs
+            .map((d) => ({ id: d.id, ...d.data() } as WhatsappCommand))
+            .filter((m) => m.scheduledFor)
+            .sort((a, b) => a.scheduledFor!.toMillis() - b.scheduledFor!.toMillis())
+        ),
+      (err) => console.error("scheduled messages subscription error:", err)
+    );
   }, [user]);
 
   const fetchGroups = async () => {
@@ -224,12 +251,25 @@ export default function WhatsappManagementPage() {
       <main className="max-w-3xl mx-auto px-4 sm:px-6 py-6 sm:py-8 flex flex-col gap-6">
         <WhatsappConnectCard session={session} onConnect={() => requestWhatsappConnection(user.uid)} />
 
-        <Link
-          href="/whatsapp/templates"
-          className="block text-center bg-white border border-gray-200 hover:border-indigo-300 hover:bg-indigo-50 text-gray-700 hover:text-indigo-700 font-semibold px-6 py-3 rounded-xl transition shadow-sm"
-        >
-          ספריית הודעות
-        </Link>
+        <div className="flex gap-3">
+          <Link
+            href="/whatsapp/templates"
+            className="flex-1 block text-center bg-white border border-gray-200 hover:border-indigo-300 hover:bg-indigo-50 text-gray-700 hover:text-indigo-700 font-semibold px-6 py-3 rounded-xl transition shadow-sm"
+          >
+            ספריית הודעות
+          </Link>
+          <button
+            onClick={() => setShowScheduled(true)}
+            className="flex-1 flex items-center justify-center gap-2 bg-white border border-gray-200 hover:border-indigo-300 hover:bg-indigo-50 text-gray-700 hover:text-indigo-700 font-semibold px-6 py-3 rounded-xl transition shadow-sm"
+          >
+            הודעות מתוזמנות
+            {scheduled.length > 0 && (
+              <span className="bg-indigo-600 text-white text-xs font-bold rounded-full min-w-[20px] h-5 px-1.5 flex items-center justify-center">
+                {scheduled.length}
+              </span>
+            )}
+          </button>
+        </div>
 
         {session?.status === "connected" && (
           <>
@@ -427,6 +467,10 @@ export default function WhatsappManagementPage() {
           </>
         )}
       </main>
+
+      {showScheduled && (
+        <ScheduledMessagesModal messages={scheduled} groups={groups} onClose={() => setShowScheduled(false)} />
+      )}
 
       {showLibrary && (
         <LibraryAttachmentModal
