@@ -19,6 +19,15 @@ interface Section {
 export default function ScheduledMessagesModal({ messages, groups, onClose }: Props) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [openKeys, setOpenKeys] = useState<Set<string>>(new Set());
+
+  const toggle = (key: string) =>
+    setOpenKeys((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
 
   const sections = useMemo<Section[]>(() => {
     const byKey = new Map<string, Section>();
@@ -85,12 +94,27 @@ export default function ScheduledMessagesModal({ messages, groups, onClose }: Pr
           <p className="text-sm text-gray-400 text-center py-10">אין הודעות מתוזמנות</p>
         ) : (
           <div className="overflow-y-auto flex flex-col gap-4 -mx-2 px-2">
-            {sections.map((s) => (
-              <div key={s.key} className="border border-gray-100 rounded-xl overflow-hidden">
-                <div className="flex items-center justify-between gap-3 bg-gray-50 px-4 py-2.5">
-                  <span className="text-sm font-bold text-gray-800">
-                    {s.label} <span className="text-gray-400 font-normal">· {s.messages.length}</span>
-                  </span>
+            {sections.map((s) => {
+              const isOpen = openKeys.has(s.key);
+              return (
+              // shrink-0: without it the flex column squashes every section
+              // down to its header height once there are more than fit.
+              <div key={s.key} className="border border-gray-100 rounded-xl overflow-hidden shrink-0">
+                <div className="flex items-center justify-between gap-3 bg-gray-50 pl-4">
+                  <button
+                    onClick={() => toggle(s.key)}
+                    className="flex-1 flex items-center gap-2 px-4 py-3 text-right hover:bg-gray-100 transition-colors"
+                  >
+                    <svg
+                      className={`w-4 h-4 text-gray-400 transition-transform duration-200 shrink-0 ${isOpen ? "rotate-180" : ""}`}
+                      fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                    </svg>
+                    <span className="text-sm font-bold text-gray-800">
+                      {s.label} <span className="text-gray-400 font-normal">· {s.messages.length} הודעות</span>
+                    </span>
+                  </button>
                   <button
                     onClick={() => cancelSection(s)}
                     disabled={busy}
@@ -99,7 +123,7 @@ export default function ScheduledMessagesModal({ messages, groups, onClose }: Pr
                     בטל את כולן
                   </button>
                 </div>
-                <div className="flex flex-col">
+                {isOpen && <div className="flex flex-col">
                   {s.messages.map((m) => {
                     const overdue = m.scheduledFor!.toMillis() < now;
                     const wa = waGroupName(m);
@@ -131,9 +155,10 @@ export default function ScheduledMessagesModal({ messages, groups, onClose }: Pr
                       </div>
                     );
                   })}
-                </div>
+                </div>}
               </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
