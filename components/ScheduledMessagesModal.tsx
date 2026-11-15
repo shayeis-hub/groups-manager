@@ -2,7 +2,15 @@
 
 import { useMemo, useState } from "react";
 import { Group } from "@/lib/groups";
-import { WhatsappCommand, deleteScheduledMessage, deleteScheduledMessages } from "@/lib/whatsapp";
+import { WhatsappCommand, deleteScheduledMessage, deleteScheduledMessages, updateScheduledMessage } from "@/lib/whatsapp";
+
+// Firestore Timestamp -> value for <input type="datetime-local"> in local time.
+function toLocalInputValue(ts: WhatsappCommand["scheduledFor"]): string {
+  if (!ts) return "";
+  const d = ts.toDate();
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
 
 interface Props {
   messages: WhatsappCommand[]; // pending sends that have a scheduledFor, soonest first
@@ -20,6 +28,9 @@ export default function ScheduledMessagesModal({ messages, groups, onClose }: Pr
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [openKeys, setOpenKeys] = useState<Set<string>>(new Set());
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editText, setEditText] = useState("");
+  const [editWhen, setEditWhen] = useState("");
 
   const toggle = (key: string) =>
     setOpenKeys((prev) => {
@@ -56,8 +67,8 @@ export default function ScheduledMessagesModal({ messages, groups, onClose }: Pr
     } catch (err) {
       setError(
         err instanceof Error && err.message
-          ? "הביטול נכשל — ייתכן שהשירות כבר התחיל לשלוח את ההודעה. " + err.message
-          : "הביטול נכשל, נסה שוב"
+          ? "הפעולה נכשלה — ייתכן שהשירות כבר התחיל לשלוח את ההודעה. " + err.message
+          : "הפעולה נכשלה, נסה שוב"
       );
     } finally {
       setBusy(false);
@@ -67,6 +78,26 @@ export default function ScheduledMessagesModal({ messages, groups, onClose }: Pr
   const cancelOne = (m: WhatsappCommand) => {
     if (!confirm("לבטל את התזמון של ההודעה הזו?")) return;
     run(() => deleteScheduledMessage(m.id));
+  };
+
+  const startEdit = (m: WhatsappCommand) => {
+    setEditingId(m.id);
+    setEditText(m.text ?? "");
+    setEditWhen(toLocalInputValue(m.scheduledFor));
+  };
+
+  const saveEdit = (m: WhatsappCommand) => {
+    if (!editWhen) return;
+    if (!editText.trim() && !m.attachment) {
+      setError("אי אפשר לשמור הודעה בלי טקסט וללא קובץ מצורף");
+      return;
+    }
+    const when = new Date(editWhen);
+    if (when.getTime() <= Date.now() && !confirm("השעה שבחרת כבר עברה, ההודעה תישלח מיד. להמשיך?")) return;
+    run(async () => {
+      await updateScheduledMessage(m.id, editText.trim(), when);
+      setEditingId(null);
+    });
   };
 
   const cancelSection = (s: Section) => {
@@ -127,6 +158,42 @@ export default function ScheduledMessagesModal({ messages, groups, onClose }: Pr
                   {s.messages.map((m) => {
                     const overdue = m.scheduledFor!.toMillis() < now;
                     const wa = waGroupName(m);
+                    if (editingId === m.id) {
+                      return (
+                        <div key={m.id} className="flex flex-col gap-2 px-4 py-3 border-t border-indigo-100 bg-indigo-50/40">
+                          <textarea
+                            value={editText}
+                            onChange={(e) => setEditText(e.target.value)}
+                            rows={3}
+                            className="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white resize-none"
+                          />
+                          {m.attachment && (
+                            <p className="text-xs text-indigo-500">קובץ מצורף: {m.attachment.name} (לא ניתן להחליף כאן)</p>
+                          )}
+                          <input
+                            type="datetime-local"
+                            value={editWhen}
+                            onChange={(e) => setEditWhen(e.target.value)}
+                            className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm bg-white self-start"
+                          />
+                          <div className="flex gap-3">
+                            <button
+                              onClick={() => saveEdit(m)}
+                              disabled={busy || !editWhen}
+                              className="text-sm font-semibold text-indigo-600 hover:underline disabled:opacity-50"
+                            >
+                              שמור
+                            </button>
+                            <button
+                              onClick={() => setEditingId(null)}
+                              className="text-sm text-gray-400 hover:underline"
+                            >
+                              ביטול
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    }
                     return (
                       <div
                         key={m.id}
@@ -145,13 +212,22 @@ export default function ScheduledMessagesModal({ messages, groups, onClose }: Pr
                             <p className="text-xs text-indigo-500 mt-0.5 truncate">קובץ מצורף: {m.attachment.name}</p>
                           )}
                         </div>
-                        <button
-                          onClick={() => cancelOne(m)}
-                          disabled={busy}
-                          className="text-xs font-semibold text-red-500 hover:underline disabled:opacity-50 shrink-0"
-                        >
-                          בטל תזמון
-                        </button>
+                        <div className="flex gap-3 shrink-0">
+                          <button
+                            onClick={() => startEdit(m)}
+                            disabled={busy}
+                            className="text-xs font-semibold text-indigo-600 hover:underline disabled:opacity-50"
+                          >
+                            ערוך
+                          </button>
+                          <button
+                            onClick={() => cancelOne(m)}
+                            disabled={busy}
+                            className="text-xs font-semibold text-red-500 hover:underline disabled:opacity-50"
+                          >
+                            בטל תזמון
+                          </button>
+                        </div>
                       </div>
                     );
                   })}
