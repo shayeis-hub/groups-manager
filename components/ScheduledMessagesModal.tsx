@@ -15,6 +15,7 @@ function toLocalInputValue(ts: WhatsappCommand["scheduledFor"]): string {
 interface Props {
   messages: WhatsappCommand[]; // pending sends that have a scheduledFor, soonest first
   groups: Group[]; // for labelling which cycle a message is headed to
+  waNames?: Record<string, string>; // WhatsApp JID -> group name, for groups the app doesn't list
   onClose: () => void;
 }
 
@@ -24,7 +25,7 @@ interface Section {
   messages: WhatsappCommand[];
 }
 
-export default function ScheduledMessagesModal({ messages, groups, onClose }: Props) {
+export default function ScheduledMessagesModal({ messages, groups, waNames, onClose }: Props) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [openKeys, setOpenKeys] = useState<Set<string>>(new Set());
@@ -45,7 +46,9 @@ export default function ScheduledMessagesModal({ messages, groups, onClose }: Pr
     for (const m of messages) {
       const group = groups.find((g) => g.id === m.appGroupId);
       const key = m.appGroupId ?? m.waGroupId;
-      const label = group ? `${group.program} · ${group.name}` : "קבוצה שאינה ברשימה (ארכיון?)";
+      const label = group
+        ? `${group.program} · ${group.name}`
+        : waNames?.[m.waGroupId] ?? "קבוצה שאינה ברשימה (ארכיון?)";
       const existing = byKey.get(key);
       if (existing) existing.messages.push(m);
       else byKey.set(key, { key, label, messages: [m] });
@@ -54,7 +57,7 @@ export default function ScheduledMessagesModal({ messages, groups, onClose }: Pr
     return Array.from(byKey.values()).sort(
       (a, b) => a.messages[0].scheduledFor!.toMillis() - b.messages[0].scheduledFor!.toMillis()
     );
-  }, [messages, groups]);
+  }, [messages, groups, waNames]);
 
   const waGroupName = (m: WhatsappCommand) =>
     groups.find((g) => g.id === m.appGroupId)?.whatsappGroups?.find((l) => l.id === m.waGroupId)?.name;
@@ -105,6 +108,11 @@ export default function ScheduledMessagesModal({ messages, groups, onClose }: Pr
     run(() => deleteScheduledMessages(s.messages.map((m) => m.id)));
   };
 
+  const cancelAll = () => {
+    if (!confirm(`לבטל את כל ${messages.length} ההודעות המתוזמנות, בכל הקבוצות?`)) return;
+    run(() => deleteScheduledMessages(messages.map((m) => m.id)));
+  };
+
   const now = Date.now();
 
   return (
@@ -118,6 +126,16 @@ export default function ScheduledMessagesModal({ messages, groups, onClose }: Pr
             ✕
           </button>
         </div>
+
+        {messages.length > 1 && (
+          <button
+            onClick={cancelAll}
+            disabled={busy}
+            className="self-start text-sm font-semibold text-red-600 hover:underline disabled:opacity-50 mb-3"
+          >
+            בטל את כל ההודעות המתוזמנות ({messages.length})
+          </button>
+        )}
 
         {error && <p className="text-sm text-red-500 bg-red-50 rounded-lg px-3 py-2 mb-3">{error}</p>}
 

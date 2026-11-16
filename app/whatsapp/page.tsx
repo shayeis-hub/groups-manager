@@ -10,6 +10,7 @@ import ScheduledMessagesModal from "@/components/ScheduledMessagesModal";
 import { WhatsappCommand, WhatsappSession, WhatsappAttachment, requestWhatsappConnection, queueWhatsappCommand, uploadWhatsappAttachment, previewStorageFile } from "@/lib/whatsapp";
 import WhatsappConnectCard from "@/components/WhatsappConnectCard";
 import LibraryAttachmentModal from "@/components/LibraryAttachmentModal";
+import BroadcastAllModal from "@/components/BroadcastAllModal";
 
 const OPEN_STATE_LABEL: Record<string, string> = {
   open: "כל הקבוצות הפעילות פתוחות לכתיבה",
@@ -30,6 +31,7 @@ export default function WhatsappManagementPage() {
   const [showLibrary, setShowLibrary] = useState(false);
   const [scheduled, setScheduled] = useState<WhatsappCommand[]>([]);
   const [showScheduled, setShowScheduled] = useState(false);
+  const [showBroadcast, setShowBroadcast] = useState(false);
   const [scheduledAt, setScheduledAt] = useState("");
   const [sending, setSending] = useState(false);
   const [feedback, setFeedback] = useState("");
@@ -273,6 +275,14 @@ export default function WhatsappManagementPage() {
 
         {session?.status === "connected" && (
           <>
+            <button
+              onClick={() => setShowBroadcast(true)}
+              className="flex items-center justify-center gap-2 bg-white border border-red-200 hover:bg-red-50 text-red-700 font-semibold px-6 py-3 rounded-xl transition shadow-sm"
+            >
+              <span className="bg-red-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs font-black">!</span>
+              הודעה לכל הקבוצות (כולל ארכיון)
+            </button>
+
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 px-5 py-4 sm:px-8 sm:py-5 flex flex-col gap-3" dir="rtl">
               <h2 className="text-lg font-bold text-gray-800">כל הקבוצות הפעילות</h2>
               <p className="text-sm text-gray-400">{OPEN_STATE_LABEL[openState]}</p>
@@ -469,7 +479,16 @@ export default function WhatsappManagementPage() {
       </main>
 
       {showScheduled && (
-        <ScheduledMessagesModal messages={scheduled} groups={groups} onClose={() => setShowScheduled(false)} />
+        <ScheduledMessagesModal
+          messages={scheduled}
+          groups={groups}
+          waNames={Object.fromEntries((session?.groups ?? []).map((g) => [g.id, g.name]))}
+          onClose={() => setShowScheduled(false)}
+        />
+      )}
+
+      {showBroadcast && (
+        <BroadcastAllModal uid={user.uid} waGroups={session?.groups ?? []} onClose={() => setShowBroadcast(false)} />
       )}
 
       {showLibrary && (
