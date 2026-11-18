@@ -12,7 +12,7 @@ import {
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { db, storage } from "@/lib/firebase";
 
-export type WhatsappCommandType = "send" | "open" | "close" | "closeGroup";
+export type WhatsappCommandType = "send" | "open" | "close" | "closeGroup" | "listGroups";
 export type WhatsappCommandStatus = "pending" | "processing" | "done" | "error";
 
 export interface WhatsappGroupOption {
@@ -35,6 +35,11 @@ export interface WhatsappAttachment {
   type: string; // mimetype
 }
 
+// One row of the live group list the bridge returns for a "listGroups" command.
+export interface WhatsappLiveGroup extends WhatsappGroupOption {
+  archived: boolean; // archived in the WhatsApp chat list itself
+}
+
 export interface WhatsappCommand {
   id: string;
   uid: string;
@@ -46,6 +51,14 @@ export interface WhatsappCommand {
   scheduledFor?: Timestamp;
   status: WhatsappCommandStatus;
   error?: string;
+  result?: { groups?: WhatsappLiveGroup[] }; // filled by the bridge for "listGroups"
+}
+
+// Asks the bridge for the account's current group list, straight from
+// WhatsApp, including chats archived in WhatsApp itself. The answer comes back
+// on the command doc and is deliberately not persisted anywhere else.
+export function requestLiveGroupList(uid: string): Promise<string> {
+  return queueWhatsappCommand({ uid, waGroupId: "all", type: "listGroups" });
 }
 
 // Asks the local bridge service to open a WhatsApp connection for this coach

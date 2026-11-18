@@ -488,7 +488,7 @@ export default function WhatsappManagementPage() {
       )}
 
       {showBroadcast && (
-        <BroadcastAllModal uid={user.uid} waGroups={session?.groups ?? []} onClose={() => setShowBroadcast(false)} />
+        <BroadcastAllModal uid={user.uid} onClose={() => setShowBroadcast(false)} />
       )}
 
       {showLibrary && (

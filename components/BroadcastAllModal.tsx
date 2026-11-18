@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { collection, getDocs, query, where } from "firebase/firestore";
+import { collection, doc, getDocs, onSnapshot, query, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { Group, isGroupActive, isGroupUpcoming, daysSinceProgramEnded } from "@/lib/groups";
-import { WhatsappGroupOption, queueWhatsappCommand, uploadWhatsappAttachment } from "@/lib/whatsapp";
+import { WhatsappCommand, WhatsappLiveGroup, queueWhatsappCommand, requestLiveGroupList, uploadWhatsappAttachment } from "@/lib/whatsapp";
 
 // One message per minute: slow enough that a mass send doesn't look like a
 // burst to WhatsApp, which is the whole point of this screen.
@@ -17,6 +17,7 @@ interface Row {
   id: string; // WhatsApp JID
   name: string; // WhatsApp-side name
   participants: number;
+  waArchived: boolean; // archived in the WhatsApp chat list itself
   kind: Kind;
   appGroup?: Group;
   label: string;
@@ -34,11 +35,15 @@ function formatDuration(minutes: number): string {
 
 interface Props {
   uid: string;
-  waGroups: WhatsappGroupOption[]; // every group the connected WhatsApp account is in
   onClose: () => void;
 }
 
-export default function BroadcastAllModal({ uid, waGroups, onClose }: Props) {
+export default function BroadcastAllModal({ uid, onClose }: Props) {
+  // The list is pulled from WhatsApp every time this opens and lives only in
+  // this component: archived-in-WhatsApp groups never become app data.
+  const [waGroups, setWaGroups] = useState<WhatsappLiveGroup[] | null>(null);
+  const [pullError, setPullError] = useState("");
+  const [slow, setSlow] = useState(false);
   const [appGroups, setAppGroups] = useState<Group[] | null>(null);
   const [loadError, setLoadError] = useState("");
   const [includeActive, setIncludeActive] = useState(false);
@@ -60,6 +65,37 @@ export default function BroadcastAllModal({ uid, waGroups, onClose }: Props) {
   }, [uid]);
 
   useEffect(() => {
+    let unsub: (() => void) | undefined;
+    let cancelled = false;
+    const slowTimer = setTimeout(() => setSlow(true), 45_000);
+    requestLiveGroupList(uid)
+      .then((id) => {
+        if (cancelled) return;
+        unsub = onSnapshot(
+          doc(db, "whatsappCommands", id),
+          (snap) => {
+            const cmd = snap.data() as WhatsappCommand | undefined;
+            if (!cmd) return;
+            if (cmd.status === "done") {
+              setWaGroups(cmd.result?.groups ?? []);
+              clearTimeout(slowTimer);
+            } else if (cmd.status === "error") {
+              setPullError(cmd.error ?? "השירות החזיר שגיאה");
+              clearTimeout(slowTimer);
+            }
+          },
+          (err) => setPullError(err.message)
+        );
+      })
+      .catch((err) => setPullError(err instanceof Error ? err.message : "שגיאה בבקשת רשימת הקבוצות"));
+    return () => {
+      cancelled = true;
+      clearTimeout(slowTimer);
+      unsub?.();
+    };
+  }, [uid]);
+
+  useEffect(() => {
     if (!file) {
       setPreviewUrl("");
       return;
@@ -70,7 +106,7 @@ export default function BroadcastAllModal({ uid, waGroups, onClose }: Props) {
   }, [file]);
 
   const rows = useMemo<Row[]>(() => {
-    if (!appGroups) return [];
+    if (!appGroups || !waGroups) return [];
     const byWaId = new Map<string, Group[]>();
     for (const g of appGroups) {
       for (const link of g.whatsappGroups ?? []) {
@@ -85,7 +121,7 @@ export default function BroadcastAllModal({ uid, waGroups, onClose }: Props) {
         // to an older cycle.
         const live = linked.find((g) => isGroupActive(g.startDate, g.program) || isGroupUpcoming(g.startDate));
         if (live) {
-          return { id: wa.id, name: wa.name, participants: wa.participants, kind: "active", appGroup: live, label: `${live.program} · ${live.name}`, note: "פעילה" };
+          return { id: wa.id, name: wa.name, participants: wa.participants, waArchived: wa.archived, kind: "active", appGroup: live, label: `${live.program} · ${live.name}`, note: "פעילה" };
         }
         const g = linked[0];
         if (g) {
@@ -94,19 +130,21 @@ export default function BroadcastAllModal({ uid, waGroups, onClose }: Props) {
             id: wa.id,
             name: wa.name,
             participants: wa.participants,
+            waArchived: wa.archived,
             kind: "finished",
             appGroup: g,
             label: `${g.program} · ${g.name}`,
             note: g.whatsappArchived ? "בארכיון" : days !== null ? `הסתיימה לפני ${days} ימים` : "הסתיימה",
           };
         }
-        return { id: wa.id, name: wa.name, participants: wa.participants, kind: "unlinked", label: wa.name, note: "לא מקושרת לאפליקציה" };
+        return { id: wa.id, name: wa.name, participants: wa.participants, waArchived: wa.archived, kind: "unlinked", label: wa.name, note: wa.archived ? "בארכיון בווטסאפ · לא מקושרת" : "לא מקושרת לאפליקציה" };
       })
       .sort((a, b) => KIND_ORDER[a.kind] - KIND_ORDER[b.kind] || a.label.localeCompare(b.label, "he"));
   }, [appGroups, waGroups]);
 
   const counts = useMemo(
     () => ({
+      waArchived: rows.filter((r) => r.kind !== "active" && r.waArchived).length,
       finished: rows.filter((r) => r.kind === "finished").length,
       unlinked: rows.filter((r) => r.kind === "unlinked").length,
       active: rows.filter((r) => r.kind === "active").length,
@@ -200,18 +238,27 @@ export default function BroadcastAllModal({ uid, waGroups, onClose }: Props) {
               סגור
             </button>
           </div>
-        ) : loadError ? (
-          <p className="text-sm text-red-500">{loadError}</p>
-        ) : appGroups === null ? (
-          <p className="text-sm text-gray-400">טוען קבוצות...</p>
-        ) : waGroups.length === 0 ? (
-          <p className="text-sm text-gray-500">
-            לא נמצאו קבוצות בחשבון הווטסאפ המחובר. אם זה לא צפוי, ייתכן ששירות הווטסאפ לא סנכרן את רשימת הקבוצות — הפעלה מחדש של השירות מרעננת אותה.
+        ) : loadError || pullError ? (
+          <p className="text-sm text-red-500 bg-red-50 rounded-lg px-3 py-2 leading-relaxed">
+            {loadError || pullError}
+            {pullError.includes("לא מוכר") && " — שירות הווטסאפ במחשב המארח עדיין לא עודכן לתמוך במשיכת רשימת הקבוצות."}
           </p>
+        ) : appGroups === null || waGroups === null ? (
+          <div className="flex flex-col gap-2 py-6 items-center">
+            <div className="w-7 h-7 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin" />
+            <p className="text-sm text-gray-500">מושך את רשימת הקבוצות מהווטסאפ...</p>
+            {slow && (
+              <p className="text-xs text-amber-600 text-center">
+                השירות לא ענה עדיין. ודא שהוא רץ במחשב המארח (הבקשה תטופל ברגע שיחזור).
+              </p>
+            )}
+          </div>
+        ) : waGroups.length === 0 ? (
+          <p className="text-sm text-gray-500">לא נמצאו קבוצות בחשבון הווטסאפ המחובר.</p>
         ) : (
           <>
             <div className="bg-red-50 text-red-700 text-sm rounded-xl px-4 py-3 leading-relaxed">
-              ההודעה תישלח לכל קבוצות הווטסאפ בחשבון שאינן פעילות: {counts.finished} שהסתיימו או בארכיון, ו-{counts.unlinked} שלא מקושרות לאפליקציה.
+              ההודעה תישלח לכל קבוצות הווטסאפ בחשבון שאינן פעילות: {counts.finished} שהסתיימו או בארכיון, ו-{counts.unlinked} שלא מקושרות לאפליקציה. מתוכן {counts.waArchived} בארכיון של הווטסאפ עצמו.
               השליחה מדורגת, קבוצה אחת בדקה.
             </div>
 
